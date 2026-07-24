@@ -1,0 +1,11 @@
+# Config & secrets
+config/db.php
+config/secrets.php
+.env
+
+# Database dumps
+*.sql
+
+# OS/editor junk
+.DS_Store
+Thumbs.db

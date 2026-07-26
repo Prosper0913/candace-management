@@ -34,6 +34,12 @@ $active_nav = $active_nav ?? '';
         </nav>
 
         <nav class="nav-group">
+            <span class="nav-label">Store</span>
+            <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">Scan Sale</a>
+            <a class="nav-link <?= $active_nav === 'products' ? 'active' : '' ?>" href="products.php">Products</a>
+        </nav>
+
+        <nav class="nav-group">
             <span class="nav-label">Insights</span>
             <a class="nav-link <?= $active_nav === 'reports' ? 'active' : '' ?>" href="reports.php">Reports</a>
         </nav>

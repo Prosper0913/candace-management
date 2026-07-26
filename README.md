@@ -106,3 +106,4 @@ a live PHP 8.3 + MariaDB 10.11 instance before delivery.
 - add a feature that lets all user to combine all expenses from different users through a request, accept/decline method.
 - in the income and expenses tab, add a date filter to the all expenses and all income card, biggest and lowest amount and a category filter for expenses. change only the file required, its a hassle if you give the whole folder which makes me download everytime, give me only the edited files.
 - add show password when logging in
+-

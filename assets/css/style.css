@@ -528,3 +528,20 @@ td.actions { text-align: right; white-space: nowrap; }
 }
 
 .helper-text { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* ---------- POS / Scan Sale ---------- */
+
+#barcode-input {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    letter-spacing: 0.02em;
+}
+
+.qty-btn:hover { background: var(--line-soft); }
+.remove-btn:hover { text-decoration: underline; }
+
+#cart-checkout:disabled,
+#cart-clear:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

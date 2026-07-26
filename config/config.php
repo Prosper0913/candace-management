@@ -14,7 +14,8 @@ define('DB_PASS', '');
 // ---- App settings -------------------------------------------------------
 define('APP_NAME', 'Candace Management System');
 define('STORE_NAME', 'Candace');
-define('ASSET_VERSION', '1.0.0'); // bump this after editing CSS/JS to bust browser cache
+define('STORE_ADDRESS', 'Maasin City, Southern Leyte'); // printed on POS receipts
+define('ASSET_VERSION', '1.1.0'); // bump this after editing CSS/JS to bust browser cache
 
 // ---- Default expense categories created for every new user ------------
 define('DEFAULT_CATEGORIES', [

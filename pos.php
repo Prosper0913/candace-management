@@ -245,6 +245,11 @@ checkoutBtn.addEventListener('click', () => {
             }
             cart = [];
             renderCart();
+
+            if (!data.printed) {
+                // Sale is saved regardless - only the physical printout failed.
+                alert('Sale saved, but the receipt did not print:\n\n' + (data.print_error || 'Unknown printer error') + '\n\nYou can reprint or view it on the next screen.');
+            }
             window.location.href = `receipt.php?sale=${data.sale_id}`;
         })
         .catch(() => {

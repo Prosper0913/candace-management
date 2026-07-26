@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/escpos.php';
+require_once __DIR__ . '/includes/printer.php';
 header('Content-Type: application/json');
 
 if (empty($_SESSION['user_id'])) {
@@ -130,11 +132,47 @@ if ($action === 'checkout') {
         }
 
         $pdo->commit();
-        echo json_encode(['ok' => true, 'sale_id' => $sale_id]);
+
+        // The sale is safely saved either way - printing is "best effort" on
+        // top of that, so a printer hiccup never loses or blocks a sale.
+        $sale_row = ['id' => $sale_id, 'total_amount' => $total, 'created_at' => date('Y-m-d H:i:s')];
+        $item_rows = array_map(fn($i) => [
+            'name' => $i[2], 'unit_price' => $i[3], 'quantity' => $i[4], 'line_total' => $i[5],
+        ], $clean_items);
+
+        [$printed, $print_error] = send_to_printer(build_receipt_escpos($sale_row, $item_rows));
+
+        echo json_encode([
+            'ok' => true,
+            'sale_id' => $sale_id,
+            'printed' => $printed,
+            'print_error' => $print_error,
+        ]);
     } catch (Exception $e) {
         $pdo->rollBack();
         echo json_encode(['ok' => false, 'error' => 'Could not complete the sale. Please try again.']);
     }
+    exit;
+}
+
+// ---- Reprint an existing sale on the thermal printer --------------------
+if ($action === 'reprint') {
+    $sale_id = (int) ($input['sale_id'] ?? 0);
+
+    $stmt = $pdo->prepare('SELECT * FROM sales WHERE id = ? AND user_id = ?');
+    $stmt->execute([$sale_id, $user_id]);
+    $sale = $stmt->fetch();
+    if (!$sale) {
+        echo json_encode(['ok' => false, 'error' => 'Sale not found.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT * FROM sale_items WHERE sale_id = ? ORDER BY id');
+    $stmt->execute([$sale_id]);
+    $items = $stmt->fetchAll();
+
+    [$printed, $print_error] = send_to_printer(build_receipt_escpos($sale, $items));
+    echo json_encode(['ok' => $printed, 'error' => $print_error]);
     exit;
 }
 

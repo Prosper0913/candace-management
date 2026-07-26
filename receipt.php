@@ -105,12 +105,44 @@ $items = $stmt->fetchAll();
 </div>
 
 <div class="actions no-print">
-    <button type="button" onclick="window.print()">Print again</button>
+    <button type="button" id="reprint-btn">Reprint on receipt printer</button>
+    <button type="button" onclick="window.print()">Print via browser instead</button>
     <a href="pos.php">Back to Scan Sale</a>
 </div>
+<p class="no-print" id="reprint-status" style="max-width:300px; margin:10px auto 0; text-align:center; font-size:12px; color:#555;"></p>
 
 <script>
-    window.addEventListener('load', () => setTimeout(() => window.print(), 200));
+    const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
+    const saleId = <?= (int) $sale['id'] ?>;
+    const reprintBtn = document.getElementById('reprint-btn');
+    const reprintStatus = document.getElementById('reprint-status');
+
+    reprintBtn.addEventListener('click', () => {
+        reprintBtn.disabled = true;
+        reprintBtn.textContent = 'Printing\u2026';
+        reprintStatus.textContent = '';
+
+        fetch('pos_api.php?action=reprint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csrf_token: CSRF_TOKEN, sale_id: saleId })
+        })
+            .then(r => r.json())
+            .then(data => {
+                reprintStatus.textContent = data.ok
+                    ? 'Sent to the printer.'
+                    : ('Printing failed: ' + (data.error || 'Unknown error') + ' - try "Print via browser instead".');
+                reprintStatus.style.color = data.ok ? '#2a7a2a' : '#b3261e';
+            })
+            .catch(() => {
+                reprintStatus.textContent = 'Could not reach the server.';
+                reprintStatus.style.color = '#b3261e';
+            })
+            .finally(() => {
+                reprintBtn.disabled = false;
+                reprintBtn.textContent = 'Reprint on receipt printer';
+            });
+    });
 </script>
 </body>
 </html>

@@ -68,7 +68,51 @@ function display_date(string $date): string
     return $ts ? date('M j, Y', $ts) : $date;
 }
 
-/** Flash message helpers (simple one-time session messages) */
+/**
+ * Returns pending shipments expected within the next 3 days, split into two
+ * urgency tiers so the UI can show the closer ones more prominently:
+ *  - 'urgent'   : due today, overdue, or arriving within ~24 hours (days_left <= 1)
+ *  - 'upcoming' : arriving in 2-3 days
+ * Each row includes item_count, total_cost, and days_left (can be negative if overdue).
+ */
+function get_shipment_alerts(PDO $pdo, int $user_id): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT s.*,
+                COUNT(si.id) AS item_count,
+                COALESCE(SUM(si.line_total), 0) AS total_cost,
+                DATEDIFF(s.expected_date, CURDATE()) AS days_left
+         FROM shipments s
+         LEFT JOIN shipment_items si ON si.shipment_id = s.id
+         WHERE s.user_id = ?
+           AND s.status = "pending"
+           AND DATEDIFF(s.expected_date, CURDATE()) <= 3
+         GROUP BY s.id
+         ORDER BY s.expected_date ASC'
+    );
+    $stmt->execute([$user_id]);
+    $rows = $stmt->fetchAll();
+
+    $urgent = [];
+    $upcoming = [];
+    foreach ($rows as $row) {
+        if ((int) $row['days_left'] <= 1) {
+            $urgent[] = $row;
+        } else {
+            $upcoming[] = $row;
+        }
+    }
+    return ['urgent' => $urgent, 'upcoming' => $upcoming];
+}
+
+/** Human-friendly phrasing for a shipment's days_left value. */
+function shipment_due_label(int $daysLeft): string
+{
+    if ($daysLeft < 0) return abs($daysLeft) . ' day(s) overdue';
+    if ($daysLeft === 0) return 'due today';
+    if ($daysLeft === 1) return 'due tomorrow';
+    return "arriving in {$daysLeft} days";
+}
 function set_flash(string $type, string $message): void
 {
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];

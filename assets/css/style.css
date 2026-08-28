@@ -545,3 +545,67 @@ td.actions { text-align: right; white-space: nowrap; }
     opacity: 0.5;
     cursor: not-allowed;
 }
+/* ---------- Shipment due-date alerts ---------- */
+
+.shipment-alert {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--muted);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--ink-soft);
+}
+
+.shipment-alert-urgent {
+    border-left-color: var(--negative);
+    color: var(--negative);
+    background: #fbf3f1;
+}
+
+.shipment-alert-upcoming {
+    border-left-color: var(--muted);
+    background: var(--line-soft);
+    color: var(--ink-soft);
+}
+
+.shipment-alert-link {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+    border-bottom: 1px solid currentColor;
+}
+
+/* ---------- Shipments page ---------- */
+
+.item-row {
+    display: grid;
+    grid-template-columns: 1.2fr 2fr 0.7fr 0.9fr 0.9fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+    .item-row { grid-template-columns: 1fr 1fr; }
+}
+
+.item-row .field { margin-bottom: 0; }
+
+.status-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+}
+
+.status-pill.pending   { color: var(--ink-soft); }
+.status-pill.received  { color: var(--positive); border-color: var(--positive); }
+.status-pill.cancelled { color: var(--muted); border-color: var(--muted); text-decoration: line-through; }

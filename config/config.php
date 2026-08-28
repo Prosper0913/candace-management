@@ -15,7 +15,7 @@ define('DB_PASS', '');
 define('APP_NAME', 'Candace Management System');
 define('STORE_NAME', 'Candace');
 define('STORE_ADDRESS', 'Maasin City, Southern Leyte'); // printed on POS receipts
-define('ASSET_VERSION', '1.2.0'); // bump this after editing CSS/JS to bust browser cache
+define('ASSET_VERSION', '1.3.0'); // bump this after editing CSS/JS to bust browser cache
 
 // ---- Receipt printer settings --------------------------------------------
 // PRINTER_MODE: 'network' (printer has its own IP address, connects via WiFi/Ethernet)

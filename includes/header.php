@@ -37,6 +37,7 @@ $active_nav = $active_nav ?? '';
             <span class="nav-label">Store</span>
             <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">Scan Sale</a>
             <a class="nav-link <?= $active_nav === 'products' ? 'active' : '' ?>" href="products.php">Products</a>
+            <a class="nav-link <?= $active_nav === 'shipments' ? 'active' : '' ?>" href="shipments.php">Shipments</a>
         </nav>
 
         <nav class="nav-group">
@@ -57,3 +58,26 @@ $active_nav = $active_nav ?? '';
         <?php foreach (get_flashes() as $flash): ?>
             <div class="flash <?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
         <?php endforeach; ?>
+
+        <?php if (!empty($_SESSION['user_id'])):
+            $shipment_alerts = get_shipment_alerts($pdo, (int) $_SESSION['user_id']);
+        ?>
+            <?php foreach ($shipment_alerts['urgent'] as $s): ?>
+                <div class="shipment-alert shipment-alert-urgent">
+                    <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
+                    &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
+                    &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
+                    (<?= h(display_date($s['expected_date'])) ?>)
+                    <a href="shipments.php" class="shipment-alert-link">View shipments</a>
+                </div>
+            <?php endforeach; ?>
+            <?php foreach ($shipment_alerts['upcoming'] as $s): ?>
+                <div class="shipment-alert shipment-alert-upcoming">
+                    <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
+                    &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
+                    &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
+                    (<?= h(display_date($s['expected_date'])) ?>)
+                    <a href="shipments.php" class="shipment-alert-link">View shipments</a>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>

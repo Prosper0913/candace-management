@@ -15,7 +15,26 @@ define('DB_PASS', '');
 define('APP_NAME', 'Candace Management System');
 define('STORE_NAME', 'Candace');
 define('STORE_ADDRESS', 'Maasin City, Southern Leyte'); // printed on POS receipts
-define('ASSET_VERSION', '1.3.0'); // bump this after editing CSS/JS to bust browser cache
+define('ASSET_VERSION', '1.4.0'); // bump this after editing CSS/JS to bust browser cache
+
+// ---- Store location (for the shipment map) -------------------------------
+// Approximate coordinates for Tomas Oppus Street, Maasin City - geocoded to
+// street/city-center precision only. For an exact pin: open Google Maps,
+// right-click your actual storefront, click the lat/lng shown at the top of
+// the menu, and paste those two numbers in here instead.
+define('STORE_FULL_ADDRESS', '311 Tomas Oppus Street, Maasin City, Southern Leyte, Philippines');
+define('STORE_LAT', 10.1328);
+define('STORE_LNG', 124.8385);
+
+// Required by OpenStreetMap Nominatim's usage policy: identify your app with
+// a real contact so they can reach you if something's wrong, instead of a
+// generic string that looks like abuse. Edit the email before going live.
+define('NOMINATIM_USER_AGENT', 'CandaceManagementSystem/1.0 (contact: youremail@example.com)');
+
+// ---- Inventory ------------------------------------------------------------
+// Default "low stock" warning line for newly registered products (owner can
+// override per product on the Products page).
+define('DEFAULT_LOW_STOCK_THRESHOLD', 5);
 
 // ---- Receipt printer settings --------------------------------------------
 // PRINTER_MODE: 'network' (printer has its own IP address, connects via WiFi/Ethernet)

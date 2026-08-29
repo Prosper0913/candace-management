@@ -127,8 +127,14 @@ if ($action === 'checkout') {
             'INSERT INTO sale_items (sale_id, product_id, barcode, name, unit_price, quantity, line_total)
              VALUES (?, ?, ?, ?, ?, ?, ?)'
         );
+        $decrement_stmt = $pdo->prepare(
+            'UPDATE products SET stock_quantity = GREATEST(stock_quantity - ?, 0) WHERE id = ? AND user_id = ?'
+        );
         foreach ($clean_items as [$product_id, $barcode, $name, $unit_price, $qty, $line_total]) {
             $stmt->execute([$sale_id, $product_id, $barcode, $name, $unit_price, $qty, $line_total]);
+            if ($product_id) {
+                $decrement_stmt->execute([$qty, $product_id, $user_id]);
+            }
         }
 
         $pdo->commit();

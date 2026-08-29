@@ -113,6 +113,20 @@ function shipment_due_label(int $daysLeft): string
     if ($daysLeft === 1) return 'due tomorrow';
     return "arriving in {$daysLeft} days";
 }
+
+/** Products at or below their own low-stock threshold. */
+function get_low_stock_products(PDO $pdo, int $user_id): array
+{
+    $stmt = $pdo->prepare(
+        'SELECT * FROM products
+         WHERE user_id = ? AND stock_quantity <= low_stock_threshold
+         ORDER BY stock_quantity ASC, name ASC'
+    );
+    $stmt->execute([$user_id]);
+    return $stmt->fetchAll();
+}
+
+/** Flash message helpers (simple one-time session messages) */
 function set_flash(string $type, string $message): void
 {
     $_SESSION['flash'][] = ['type' => $type, 'message' => $message];

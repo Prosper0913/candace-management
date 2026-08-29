@@ -609,3 +609,57 @@ td.actions { text-align: right; white-space: nowrap; }
 .status-pill.pending   { color: var(--ink-soft); }
 .status-pill.received  { color: var(--positive); border-color: var(--positive); }
 .status-pill.cancelled { color: var(--muted); border-color: var(--muted); text-decoration: line-through; }
+
+/* ---------- Nav notification badge ---------- */
+
+.nav-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: var(--negative);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 16px;
+    vertical-align: middle;
+}
+
+/* ---------- Delivery map ---------- */
+
+#shipment-map {
+    height: 440px;
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+}
+
+.map-pin {
+    width: 26px;
+    height: 26px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    background: var(--ink);
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.map-pin span {
+    display: inline-block;
+    transform: rotate(45deg); /* counter-rotate so the letter reads upright */
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    font-family: var(--font-mono);
+}
+.map-pin-supplier { background: var(--negative); }
+.map-pin-store { background: var(--positive); }
+
+.map-truck {
+    font-size: 22px;
+    line-height: 1;
+    transform: translateY(-2px);
+}

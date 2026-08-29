@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/geocoding.php';
 require_login();
 
 $user_id = current_user_id();
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---- Create a new expected shipment ----------------------------------
     if ($action === 'create') {
         $supplier = trim($_POST['supplier'] ?? '');
+        $supplier_address = trim($_POST['supplier_address'] ?? '');
         $expected_date = trim($_POST['expected_date'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
 
@@ -65,12 +67,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$errors) {
+            // Best-effort geocoding: if it fails (no internet, address not
+            // found), the shipment still saves fine - it just won't have a
+            // map until you edit the address later.
+            $lat = $lng = null;
+            $geocode_status = 'pending';
+            $route_json = null;
+            if ($supplier_address !== '') {
+                $point = geocode_address($supplier_address);
+                if ($point) {
+                    [$lat, $lng] = $point;
+                    $geocode_status = 'ok';
+                    $route = get_route_points($lat, $lng, STORE_LAT, STORE_LNG);
+                    if ($route) {
+                        $route_json = json_encode($route);
+                    }
+                } else {
+                    $geocode_status = 'failed';
+                }
+            }
+
             try {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare(
-                    'INSERT INTO shipments (user_id, supplier, expected_date, notes) VALUES (?, ?, ?, ?)'
+                    'INSERT INTO shipments
+                        (user_id, supplier, supplier_address, supplier_lat, supplier_lng, geocode_status, route_geojson, expected_date, notes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 );
-                $stmt->execute([$user_id, $supplier !== '' ? $supplier : null, $expected_date, $notes !== '' ? $notes : null]);
+                $stmt->execute([
+                    $user_id, $supplier !== '' ? $supplier : null,
+                    $supplier_address !== '' ? $supplier_address : null,
+                    $lat, $lng, $geocode_status, $route_json,
+                    $expected_date, $notes !== '' ? $notes : null,
+                ]);
                 $shipment_id = (int) $pdo->lastInsertId();
 
                 $stmt = $pdo->prepare(
@@ -84,7 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
                 $pdo->commit();
-                set_flash('success', 'Shipment scheduled.');
+
+                if ($supplier_address !== '' && $geocode_status === 'failed') {
+                    set_flash('success', "Shipment scheduled. Couldn't pin \"{$supplier_address}\" on the map - you can fix the address later from this page.");
+                } else {
+                    set_flash('success', 'Shipment scheduled.');
+                }
                 header('Location: shipments.php');
                 exit;
             } catch (Exception $e) {
@@ -126,11 +160,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $expense_id = (int) $pdo->lastInsertId();
                 }
 
+                // Restock: add each item's quantity onto its linked product,
+                // so the Products/Notifications pages reflect the delivery.
+                $stmt = $pdo->prepare('SELECT product_id, quantity FROM shipment_items WHERE shipment_id = ? AND product_id IS NOT NULL');
+                $stmt->execute([$id]);
+                $restock_stmt = $pdo->prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ? AND user_id = ?');
+                foreach ($stmt->fetchAll() as $line) {
+                    $restock_stmt->execute([$line['quantity'], $line['product_id'], $user_id]);
+                }
+
                 $stmt = $pdo->prepare('UPDATE shipments SET status = "received", expense_id = ? WHERE id = ? AND user_id = ?');
                 $stmt->execute([$expense_id, $id, $user_id]);
 
                 $pdo->commit();
-                set_flash('success', $log_expense ? 'Shipment received and logged as an expense.' : 'Shipment marked as received.');
+                set_flash('success', $log_expense ? 'Shipment received, stock updated, and logged as an expense.' : 'Shipment received and stock updated.');
             } catch (Exception $e) {
                 $pdo->rollBack();
                 set_flash('error', 'Could not update the shipment.');
@@ -173,7 +216,6 @@ $stmt = $pdo->prepare(
 $stmt->execute([$user_id]);
 $shipments = $stmt->fetchAll();
 
-// Item detail per shipment, for the expandable row
 $items_by_shipment = [];
 if ($shipments) {
     $ids = array_column($shipments, 'id');
@@ -193,7 +235,7 @@ include __DIR__ . '/includes/header.php';
     <div>
         <p class="eyebrow">Store</p>
         <h1>Upcoming Shipments</h1>
-        <p>Track what's on order, how much it costs, and when it's due. You'll see a heads-up above every page starting 3 days out.</p>
+        <p>Track what's on order, how much it costs, and when it's due. Add a supplier address to see it on the delivery map.</p>
     </div>
 </div>
 
@@ -215,6 +257,10 @@ include __DIR__ . '/includes/header.php';
             <div class="field">
                 <label for="expected_date">Expected delivery date</label>
                 <input type="date" id="expected_date" name="expected_date" required>
+            </div>
+            <div class="field full">
+                <label for="supplier_address">Supplier address (optional - needed for the delivery map)</label>
+                <input type="text" id="supplier_address" name="supplier_address" placeholder="e.g. Cebu City, Cebu, Philippines">
             </div>
             <div class="field full">
                 <label for="notes">Notes (optional)</label>
@@ -256,7 +302,11 @@ include __DIR__ . '/includes/header.php';
             <tbody>
             <?php foreach ($shipments as $s): $days_left = (int) round((strtotime($s['expected_date']) - strtotime(date('Y-m-d'))) / 86400); ?>
                 <tr>
-                    <td><?= h($s['supplier'] ?: '—') ?><?php if ($s['notes']): ?><br><span class="helper-text"><?= h($s['notes']) ?></span><?php endif; ?></td>
+                    <td>
+                        <?= h($s['supplier'] ?: '—') ?>
+                        <?php if ($s['notes']): ?><br><span class="helper-text"><?= h($s['notes']) ?></span><?php endif; ?>
+                        <?php if ($s['geocode_status'] === 'failed'): ?><br><span class="helper-text" style="color:var(--negative);">Address not found for the map</span><?php endif; ?>
+                    </td>
                     <td>
                         <?= h(display_date($s['expected_date'])) ?>
                         <?php if ($s['status'] === 'pending'): ?><br><span class="helper-text"><?= h(shipment_due_label($days_left)) ?></span><?php endif; ?>
@@ -270,6 +320,9 @@ include __DIR__ . '/includes/header.php';
                     <td class="amount"><?= peso((float) $s['total_cost']) ?></td>
                     <td><span class="status-pill <?= h($s['status']) ?>"><?= h(ucfirst($s['status'])) ?></span></td>
                     <td class="actions">
+                        <?php if ($s['status'] === 'pending' && $s['supplier_lat'] !== null): ?>
+                            <a class="icon-link" href="shipment_map.php?id=<?= (int) $s['id'] ?>">View map</a><br>
+                        <?php endif; ?>
                         <?php if ($s['status'] === 'pending'): ?>
                             <form method="post" style="display:inline-block; text-align:right;" onsubmit="return confirm('Mark this shipment as received?');">
                                 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
@@ -359,7 +412,6 @@ itemRows.addEventListener('input', (e) => {
     }
 });
 
-// Optional: autofill the product name when a registered barcode is scanned/typed.
 itemRows.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.classList.contains('row-barcode')) {
         e.preventDefault();

@@ -29,26 +29,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $barcode = trim($_POST['barcode'] ?? '');
     $name = trim($_POST['name'] ?? '');
     $price = $_POST['price'] ?? '';
+    $stock_quantity = $_POST['stock_quantity'] ?? '0';
+    $low_stock_threshold = $_POST['low_stock_threshold'] ?? (string) DEFAULT_LOW_STOCK_THRESHOLD;
 
     if ($barcode === '') $errors[] = 'Please scan or type a barcode.';
     elseif (strlen($barcode) > 64) $errors[] = 'Barcode is too long.';
     if ($name === '') $errors[] = 'Please enter a product name.';
     if (!is_numeric($price) || (float) $price <= 0) $errors[] = 'Please enter a valid price greater than zero.';
+    if (!is_numeric($stock_quantity) || (int) $stock_quantity < 0) $errors[] = 'Stock on hand must be zero or more.';
+    if (!is_numeric($low_stock_threshold) || (int) $low_stock_threshold < 0) $errors[] = 'Low-stock warning level must be zero or more.';
 
     if (!$errors) {
         try {
             if ($action === 'update') {
                 $id = (int) ($_POST['id'] ?? 0);
                 $stmt = $pdo->prepare(
-                    'UPDATE products SET barcode = ?, name = ?, price = ? WHERE id = ? AND user_id = ?'
+                    'UPDATE products SET barcode = ?, name = ?, price = ?, stock_quantity = ?, low_stock_threshold = ? WHERE id = ? AND user_id = ?'
                 );
-                $stmt->execute([$barcode, $name, $price, $id, $user_id]);
+                $stmt->execute([$barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold, $id, $user_id]);
                 set_flash('success', 'Product updated.');
             } else {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO products (user_id, barcode, name, price) VALUES (?, ?, ?, ?)'
+                    'INSERT INTO products (user_id, barcode, name, price, stock_quantity, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?)'
                 );
-                $stmt->execute([$user_id, $barcode, $name, $price]);
+                $stmt->execute([$user_id, $barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold]);
                 set_flash('success', 'Product registered to that barcode.');
             }
             header('Location: products.php');
@@ -121,6 +125,16 @@ include __DIR__ . '/includes/header.php';
                 <input type="number" step="0.01" min="0.01" id="price" name="price"
                        value="<?= h((string) ($editing['price'] ?? '')) ?>" required>
             </div>
+            <div class="field">
+                <label for="stock_quantity">Stock on hand</label>
+                <input type="number" step="1" min="0" id="stock_quantity" name="stock_quantity"
+                       value="<?= h((string) ($editing['stock_quantity'] ?? '0')) ?>" required>
+            </div>
+            <div class="field">
+                <label for="low_stock_threshold">Warn me when stock falls to</label>
+                <input type="number" step="1" min="0" id="low_stock_threshold" name="low_stock_threshold"
+                       value="<?= h((string) ($editing['low_stock_threshold'] ?? DEFAULT_LOW_STOCK_THRESHOLD)) ?>" required>
+            </div>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn"><?= $editing ? 'Save changes' : 'Register product' ?></button>
@@ -136,14 +150,18 @@ include __DIR__ . '/includes/header.php';
     <?php else: ?>
         <table>
             <thead>
-                <tr><th>Barcode</th><th>Name</th><th class="amount">Price</th><th>Units sold</th><th></th></tr>
+                <tr><th>Barcode</th><th>Name</th><th class="amount">Price</th><th>Stock</th><th>Units sold</th><th></th></tr>
             </thead>
             <tbody>
-            <?php foreach ($products as $row): ?>
+            <?php foreach ($products as $row): $low = (int) $row['stock_quantity'] <= (int) $row['low_stock_threshold']; ?>
                 <tr>
                     <td style="font-family:var(--font-mono);"><?= h($row['barcode']) ?></td>
                     <td><?= h($row['name']) ?></td>
                     <td class="amount"><?= peso((float) $row['price']) ?></td>
+                    <td>
+                        <?= (int) $row['stock_quantity'] ?>
+                        <?php if ($low): ?><span class="status-pill cancelled" style="text-decoration:none; color:var(--negative); border-color:var(--negative);">Low</span><?php endif; ?>
+                    </td>
                     <td><?= (int) $row['units_sold'] ?></td>
                     <td class="actions">
                         <a class="icon-link" href="products.php?edit=<?= (int) $row['id'] ?>">Edit</a>

@@ -1,9 +1,16 @@
 <?php
 /**
  * Expects $page_title and optional $page_subtitle to be set before include.
- * Expects $active_nav to be one of: dashboard, income, expenses, categories, reports
+ * Expects $active_nav to be one of: dashboard, income, expenses, categories, reports, pos, products, shipments, notifications
  */
 $active_nav = $active_nav ?? '';
+
+$header_alert_count = 0;
+if (!empty($_SESSION['user_id'])) {
+    $header_shipment_alerts = get_shipment_alerts($pdo, (int) $_SESSION['user_id']);
+    $header_low_stock = get_low_stock_products($pdo, (int) $_SESSION['user_id']);
+    $header_alert_count = count($header_shipment_alerts['urgent']) + count($header_low_stock);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,6 +41,14 @@ $active_nav = $active_nav ?? '';
         </nav>
 
         <nav class="nav-group">
+            <span class="nav-label">Alerts</span>
+            <a class="nav-link <?= $active_nav === 'notifications' ? 'active' : '' ?>" href="notifications.php">
+                Notifications
+                <?php if ($header_alert_count > 0): ?><span class="nav-badge"><?= (int) $header_alert_count ?></span><?php endif; ?>
+            </a>
+        </nav>
+
+        <nav class="nav-group">
             <span class="nav-label">Store</span>
             <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">Scan Sale</a>
             <a class="nav-link <?= $active_nav === 'products' ? 'active' : '' ?>" href="products.php">Products</a>
@@ -59,10 +74,8 @@ $active_nav = $active_nav ?? '';
             <div class="flash <?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
         <?php endforeach; ?>
 
-        <?php if (!empty($_SESSION['user_id'])):
-            $shipment_alerts = get_shipment_alerts($pdo, (int) $_SESSION['user_id']);
-        ?>
-            <?php foreach ($shipment_alerts['urgent'] as $s): ?>
+        <?php if (!empty($_SESSION['user_id'])): ?>
+            <?php foreach ($header_shipment_alerts['urgent'] as $s): ?>
                 <div class="shipment-alert shipment-alert-urgent">
                     <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
                     &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
@@ -71,7 +84,7 @@ $active_nav = $active_nav ?? '';
                     <a href="shipments.php" class="shipment-alert-link">View shipments</a>
                 </div>
             <?php endforeach; ?>
-            <?php foreach ($shipment_alerts['upcoming'] as $s): ?>
+            <?php foreach ($header_shipment_alerts['upcoming'] as $s): ?>
                 <div class="shipment-alert shipment-alert-upcoming">
                     <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
                     &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
@@ -80,4 +93,11 @@ $active_nav = $active_nav ?? '';
                     <a href="shipments.php" class="shipment-alert-link">View shipments</a>
                 </div>
             <?php endforeach; ?>
+            <?php if ($header_low_stock): ?>
+                <div class="shipment-alert shipment-alert-urgent">
+                    <strong><?= count($header_low_stock) ?> product(s) running low</strong>
+                    &mdash; <?= h(implode(', ', array_map(fn($p) => $p['name'] . ' (' . (int) $p['stock_quantity'] . ' left)', array_slice($header_low_stock, 0, 3)))) ?><?= count($header_low_stock) > 3 ? ', &hellip;' : '' ?>
+                    <a href="notifications.php" class="shipment-alert-link">View all</a>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>

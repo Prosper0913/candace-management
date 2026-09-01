@@ -32,19 +32,23 @@ define('STORE_LNG', 124.8385);
 define('NOMINATIM_USER_AGENT', 'CandaceManagementSystem/1.0 (contact: youremail@example.com)');
 
 // ---- LocationIQ (address search + routing) --------------------------------
-// The shipment map's address search and routing run on LocationIQ instead of
-// hitting Nominatim/OSRM's public demo servers directly - those free demo
-// servers are meant for light testing only and will flat-out block an app
-// like this (their policy explicitly forbids autocomplete/type-ahead use).
-// LocationIQ is built on the same OpenStreetMap data, has a genuinely free
-// tier that explicitly permits this kind of embedded use (5,000 requests/day,
-// 2/second - far more than a small store needs), and its API responses use
-// the same field names Nominatim does, so nothing else needed to change.
+// The actual API key lives in config/secrets.php, NOT here - that file is
+// git-ignored (see .gitignore) so your key never gets committed to a public
+// repo. This file only defines a safe empty fallback so the app doesn't
+// break for anyone who clones the repo without that file.
 //
-// Get a free key: https://locationiq.com/ -> Sign up -> Dashboard -> "Access Tokens"
-// Then paste it below. Until you do, address search/routing will show a clear
-// "no API key configured" message instead of failing mysteriously.
-   define('LOCATIONIQ_API_KEY', 'your_actual_key_here');
+// One-time setup:
+//   1. Copy config/secrets.example.php to config/secrets.php
+//   2. Get a free key at https://locationiq.com/ -> Dashboard -> Access Tokens
+//   3. Paste it into config/secrets.php
+// config/secrets.php is in .gitignore, so this step never needs repeating
+// after a `git pull` - it only lives on your own machine.
+if (file_exists(__DIR__ . '/secrets.php')) {
+    require_once __DIR__ . '/secrets.php';
+}
+if (!defined('LOCATIONIQ_API_KEY')) {
+    define('LOCATIONIQ_API_KEY', '');
+}
 
 // ---- Inventory ------------------------------------------------------------
 // Default "low stock" warning line for newly registered products (owner can

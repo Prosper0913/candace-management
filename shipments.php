@@ -20,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create') {
         $supplier = trim($_POST['supplier'] ?? '');
         $supplier_address = trim($_POST['supplier_address'] ?? '');
+        $lat_hint = $_POST['supplier_lat_hint'] ?? '';
+        $lng_hint = $_POST['supplier_lng_hint'] ?? '';
         $expected_date = trim($_POST['expected_date'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
 
@@ -67,23 +69,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$errors) {
-            // Best-effort geocoding: if it fails (no internet, address not
-            // found), the shipment still saves fine - it just won't have a
-            // map until you edit the address later.
+            // If the owner picked a suggestion from the address search box,
+            // we already know Nominatim resolved it - use those coordinates
+            // directly instead of re-searching (faster, and guaranteed to
+            // "pin" since it's a place Nominatim already confirmed exists).
+            // Only fall back to a fresh geocode attempt if they typed an
+            // address without picking a suggestion.
             $lat = $lng = null;
             $geocode_status = 'pending';
             $route_json = null;
-            if ($supplier_address !== '') {
+
+            if (is_numeric($lat_hint) && is_numeric($lng_hint)) {
+                $lat = (float) $lat_hint;
+                $lng = (float) $lng_hint;
+                $geocode_status = 'ok';
+            } elseif ($supplier_address !== '') {
                 $point = geocode_address($supplier_address);
                 if ($point) {
                     [$lat, $lng] = $point;
                     $geocode_status = 'ok';
-                    $route = get_route_points($lat, $lng, STORE_LAT, STORE_LNG);
-                    if ($route) {
-                        $route_json = json_encode($route);
-                    }
                 } else {
                     $geocode_status = 'failed';
+                }
+            }
+
+            if ($lat !== null && $lng !== null) {
+                $route = get_route_points($lat, $lng, STORE_LAT, STORE_LNG);
+                if ($route) {
+                    $route_json = json_encode($route);
                 }
             }
 
@@ -115,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
 
                 if ($supplier_address !== '' && $geocode_status === 'failed') {
-                    set_flash('success', "Shipment scheduled. Couldn't pin \"{$supplier_address}\" on the map - you can fix the address later from this page.");
+                    set_flash('success', "Shipment scheduled. Couldn't pin \"{$supplier_address}\" on the map - try picking a suggestion from the address search next time, or edit it later from this page.");
                 } else {
                     set_flash('success', 'Shipment scheduled.');
                 }
@@ -235,7 +248,7 @@ include __DIR__ . '/includes/header.php';
     <div>
         <p class="eyebrow">Store</p>
         <h1>Upcoming Shipments</h1>
-        <p>Track what's on order, how much it costs, and when it's due. Add a supplier address to see it on the delivery map.</p>
+        <p>Track what's on order, how much it costs, and when it's due. Type a supplier address and click Search to pin it on the delivery map.</p>
     </div>
 </div>
 
@@ -260,7 +273,14 @@ include __DIR__ . '/includes/header.php';
             </div>
             <div class="field full">
                 <label for="supplier_address">Supplier address (optional - needed for the delivery map)</label>
-                <input type="text" id="supplier_address" name="supplier_address" placeholder="e.g. Cebu City, Cebu, Philippines">
+                <div style="display:flex; gap:8px; align-items:start;">
+                    <input type="text" id="supplier_address" name="supplier_address" placeholder="Type the full address, then click Search" autocomplete="off" style="flex:1;">
+                    <button type="button" id="address-search-btn" class="btn-ghost btn btn-small" style="width:auto; white-space:nowrap;">Search</button>
+                </div>
+                <input type="hidden" id="supplier_lat_hint" name="supplier_lat_hint">
+                <input type="hidden" id="supplier_lng_hint" name="supplier_lng_hint">
+                <div id="address-suggestions" class="address-suggestions" style="display:none;"></div>
+                <p class="helper-text" id="address-status"></p>
             </div>
             <div class="field full">
                 <label for="notes">Notes (optional)</label>
@@ -391,6 +411,101 @@ function recalcGrandTotal() {
     });
     grandTotalEl.textContent = PESO(total);
 }
+
+// ---- Supplier address search (Nominatim's usage policy explicitly bans
+// autocomplete/search-as-you-type - see https://operations.osmfoundation.org/policies/nominatim/ -
+// so this only searches when the owner clicks "Search", never automatically
+// while typing. One request per deliberate click.) ----
+const addressInput = document.getElementById('supplier_address');
+const searchBtn = document.getElementById('address-search-btn');
+const latHint = document.getElementById('supplier_lat_hint');
+const lngHint = document.getElementById('supplier_lng_hint');
+const suggestionsBox = document.getElementById('address-suggestions');
+const addressStatus = document.getElementById('address-status');
+
+function clearAddressHint() {
+    latHint.value = '';
+    lngHint.value = '';
+    addressStatus.textContent = '';
+    addressStatus.style.color = '';
+}
+
+function showSuggestions(results) {
+    suggestionsBox.innerHTML = '';
+    if (!results.length) {
+        suggestionsBox.style.display = 'none';
+        return;
+    }
+    results.forEach(place => {
+        const item = document.createElement('div');
+        item.className = 'address-suggestion-item';
+        item.textContent = place.label;
+        item.addEventListener('click', () => {
+            addressInput.value = place.label;
+            latHint.value = place.lat;
+            lngHint.value = place.lng;
+            suggestionsBox.style.display = 'none';
+            addressStatus.textContent = '\u2713 Pinned - this address will show on the delivery map';
+            addressStatus.style.color = 'var(--positive)';
+        });
+        suggestionsBox.appendChild(item);
+    });
+    suggestionsBox.style.display = 'block';
+}
+
+// Editing the text after picking a suggestion invalidates it, since the
+// text no longer necessarily matches those coordinates.
+addressInput.addEventListener('input', () => {
+    clearAddressHint();
+    suggestionsBox.style.display = 'none';
+});
+
+searchBtn.addEventListener('click', () => {
+    const query = addressInput.value.trim();
+    if (query.length < 3) {
+        addressStatus.textContent = 'Type at least 3 characters first.';
+        addressStatus.style.color = 'var(--muted)';
+        return;
+    }
+
+    searchBtn.disabled = true;
+    searchBtn.textContent = 'Searching\u2026';
+    addressStatus.textContent = '';
+
+    fetch(`geocode_api.php?action=search&q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                showSuggestions(data.results);
+                if (data.results.length === 0) {
+                    addressStatus.textContent = 'No matching places found - you can still save this as typed, but it may not pin on the map.';
+                    addressStatus.style.color = 'var(--muted)';
+                }
+            } else {
+                addressStatus.textContent = data.error || 'Address search failed.';
+                addressStatus.style.color = 'var(--negative)';
+            }
+        })
+        .catch(() => {
+            addressStatus.textContent = "Couldn't reach the address search service (needs internet) - you can still type an address manually.";
+            addressStatus.style.color = 'var(--muted)';
+        })
+        .finally(() => {
+            // A short cooldown keeps even rapid double-clicking well under
+            // Nominatim's 1-request-per-second limit.
+            setTimeout(() => {
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search';
+            }, 1200);
+        });
+});
+
+// Hide suggestions when clicking elsewhere on the page.
+document.addEventListener('click', (e) => {
+    if (e.target !== addressInput && e.target !== searchBtn && !suggestionsBox.contains(e.target)) {
+        suggestionsBox.style.display = 'none';
+    }
+});
 
 document.getElementById('add-row-btn').addEventListener('click', () => {
     itemRows.appendChild(rowTemplate());

@@ -31,6 +31,21 @@ define('STORE_LNG', 124.8385);
 // generic string that looks like abuse. Edit the email before going live.
 define('NOMINATIM_USER_AGENT', 'CandaceManagementSystem/1.0 (contact: youremail@example.com)');
 
+// ---- LocationIQ (address search + routing) --------------------------------
+// The shipment map's address search and routing run on LocationIQ instead of
+// hitting Nominatim/OSRM's public demo servers directly - those free demo
+// servers are meant for light testing only and will flat-out block an app
+// like this (their policy explicitly forbids autocomplete/type-ahead use).
+// LocationIQ is built on the same OpenStreetMap data, has a genuinely free
+// tier that explicitly permits this kind of embedded use (5,000 requests/day,
+// 2/second - far more than a small store needs), and its API responses use
+// the same field names Nominatim does, so nothing else needed to change.
+//
+// Get a free key: https://locationiq.com/ -> Sign up -> Dashboard -> "Access Tokens"
+// Then paste it below. Until you do, address search/routing will show a clear
+// "no API key configured" message instead of failing mysteriously.
+   define('LOCATIONIQ_API_KEY', 'your_actual_key_here');
+
 // ---- Inventory ------------------------------------------------------------
 // Default "low stock" warning line for newly registered products (owner can
 // override per product on the Products page).

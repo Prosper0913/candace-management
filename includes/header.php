@@ -24,7 +24,7 @@ if (!empty($_SESSION['user_id'])) {
 <div class="app-shell">
     <aside class="sidebar">
         <div class="brand">
-            <span class="brand-mark">Candace Store</span>
+            <img src="images/logo.png" alt="Logo">
             <span class="brand-name"><?= h(STORE_NAME) ?></span>
         </div>
 
@@ -50,7 +50,7 @@ if (!empty($_SESSION['user_id'])) {
 
         <nav class="nav-group">
             <span class="nav-label">Store</span>
-            <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">Scan Sale</a>
+            <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">New Sale</a>
             <a class="nav-link <?= $active_nav === 'products' ? 'active' : '' ?>" href="products.php">Products</a>
             <a class="nav-link <?= $active_nav === 'shipments' ? 'active' : '' ?>" href="shipments.php">Shipments</a>
         </nav>
@@ -73,31 +73,3 @@ if (!empty($_SESSION['user_id'])) {
         <?php foreach (get_flashes() as $flash): ?>
             <div class="flash <?= h($flash['type']) ?>"><?= h($flash['message']) ?></div>
         <?php endforeach; ?>
-
-        <?php if (!empty($_SESSION['user_id'])): ?>
-            <?php foreach ($header_shipment_alerts['urgent'] as $s): ?>
-                <div class="shipment-alert shipment-alert-urgent">
-                    <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
-                    &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
-                    &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
-                    (<?= h(display_date($s['expected_date'])) ?>)
-                    <a href="shipments.php" class="shipment-alert-link">View shipments</a>
-                </div>
-            <?php endforeach; ?>
-            <?php foreach ($header_shipment_alerts['upcoming'] as $s): ?>
-                <div class="shipment-alert shipment-alert-upcoming">
-                    <strong><?= h($s['supplier'] ?: 'Shipment') ?></strong>
-                    &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
-                    &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
-                    (<?= h(display_date($s['expected_date'])) ?>)
-                    <a href="shipments.php" class="shipment-alert-link">View shipments</a>
-                </div>
-            <?php endforeach; ?>
-            <?php if ($header_low_stock): ?>
-                <div class="shipment-alert shipment-alert-urgent">
-                    <strong><?= count($header_low_stock) ?> product(s) running low</strong>
-                    &mdash; <?= h(implode(', ', array_map(fn($p) => $p['name'] . ' (' . (int) $p['stock_quantity'] . ' left)', array_slice($header_low_stock, 0, 3)))) ?><?= count($header_low_stock) > 3 ? ', &hellip;' : '' ?>
-                    <a href="notifications.php" class="shipment-alert-link">View all</a>
-                </div>
-            <?php endif; ?>
-        <?php endif; ?>

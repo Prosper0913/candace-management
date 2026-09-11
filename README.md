@@ -107,3 +107,7 @@ a live PHP 8.3 + MariaDB 10.11 instance before delivery.
 - in the income and expenses tab, add a date filter to the all expenses and all income card, biggest and lowest amount and a category filter for expenses. change only the file required, its a hassle if you give the whole folder which makes me download everytime, give me only the edited files.
 - add show password when logging in
 -
+
+11/9/26
+-change store location, make it more specific (tapad pannys instead of tapad plaza)
+-ADD LOGO 

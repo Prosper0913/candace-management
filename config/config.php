@@ -14,8 +14,10 @@ define('DB_PASS', '');
 // ---- App settings -------------------------------------------------------
 define('APP_NAME', 'Candace Management System');
 define('STORE_NAME', 'Candace');
+define('STORE_SUBTITLE', 'Convenience Store'); // matches the storefront sign
+define('STORE_TAGLINE', 'A Variety Store Closer To You'); // matches the storefront sign
 define('STORE_ADDRESS', 'Maasin City, Southern Leyte'); // printed on POS receipts
-define('ASSET_VERSION', '1.4.0'); // bump this after editing CSS/JS to bust browser cache
+define('ASSET_VERSION', '1.5.0'); // bump this after editing CSS/JS to bust browser cache
 
 // ---- Store location (for the shipment map) -------------------------------
 // Approximate coordinates for Tomas Oppus Street, Maasin City - geocoded to

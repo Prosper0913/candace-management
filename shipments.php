@@ -217,15 +217,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ---- List all shipments ---------------------------------------------------
-$stmt = $pdo->prepare(
-    'SELECT s.*, COALESCE(SUM(si.line_total), 0) AS total_cost, COUNT(si.id) AS item_count
-     FROM shipments s
-     LEFT JOIN shipment_items si ON si.shipment_id = s.id
-     WHERE s.user_id = ?
-     GROUP BY s.id
-     ORDER BY (s.status = "pending") DESC, s.expected_date ASC'
-);
+// ---- List shipments (optionally filtered by status) ----------------------
+$allowed_filters = ['upcoming', 'all', 'received', 'cancelled'];
+$filter = in_array($_GET['filter'] ?? '', $allowed_filters, true) ? $_GET['filter'] : 'all';
+
+$sql = 'SELECT s.*, COALESCE(SUM(si.line_total), 0) AS total_cost, COUNT(si.id) AS item_count
+        FROM shipments s
+        LEFT JOIN shipment_items si ON si.shipment_id = s.id
+        WHERE s.user_id = ?';
+if ($filter === 'upcoming') {
+    $sql .= ' AND s.status = "pending"';
+} elseif ($filter === 'received') {
+    $sql .= ' AND s.status = "received"';
+} elseif ($filter === 'cancelled') {
+    $sql .= ' AND s.status = "cancelled"';
+}
+$sql .= ' GROUP BY s.id ORDER BY (s.status = "pending") DESC, s.expected_date ASC';
+
+$stmt = $pdo->prepare($sql);
 $stmt->execute([$user_id]);
 $shipments = $stmt->fetchAll();
 
@@ -250,6 +259,7 @@ include __DIR__ . '/includes/header.php';
         <h1>Upcoming Shipments</h1>
         <p>Track what's on order, how much it costs, and when it's due. Type a supplier address and click Search to pin it on the delivery map.</p>
     </div>
+    <a href="shipments_map.php" class="btn-ghost btn" style="text-decoration:none;">View all on map</a>
 </div>
 
 <?php foreach ($errors as $error): ?>
@@ -311,9 +321,34 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <div class="card">
-    <div class="card-title">All shipments</div>
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span>
+            <?php
+            $filter_titles = ['upcoming' => 'Upcoming shipments', 'all' => 'All shipments', 'received' => 'Received shipments', 'cancelled' => 'Cancelled shipments'];
+            echo h($filter_titles[$filter]);
+            ?>
+        </span>
+        <div style="display:flex; gap:8px; font-size:13px; font-weight:600; flex-wrap:wrap;">
+            <?php foreach (['upcoming' => 'Upcoming', 'all' => 'All', 'received' => 'Received', 'cancelled' => 'Cancelled'] as $key => $label): ?>
+                <a href="shipments.php?filter=<?= h($key) ?>"
+                   style="text-decoration:none; padding:4px 10px; border-radius:999px; border:1px solid var(--line); <?= $filter === $key ? 'background:var(--ink); color:#fff; border-color:var(--ink);' : 'color:var(--ink-soft);' ?>">
+                    <?= h($label) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
     <?php if (!$shipments): ?>
-        <div class="empty-state">No shipments scheduled yet. Add one above when you place an order with a supplier.</div>
+        <div class="empty-state">
+            <?php
+            $empty_messages = [
+                'upcoming' => 'No upcoming shipments right now. Everything on order has arrived, or you haven\'t scheduled a new one yet.',
+                'received' => 'No shipments marked received yet.',
+                'cancelled' => 'No cancelled shipments.',
+                'all' => 'No shipments scheduled yet. Add one above when you place an order with a supplier.',
+            ];
+            echo $empty_messages[$filter];
+            ?>
+        </div>
     <?php else: ?>
         <table>
             <thead>

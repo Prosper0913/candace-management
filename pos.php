@@ -2,15 +2,22 @@
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-$page_title = 'Scan Sale';
+$user_id = current_user_id();
+
+// Products available to pick manually (alternative to scanning).
+$stmt = $pdo->prepare('SELECT id, barcode, name, price, stock_quantity FROM products WHERE user_id = ? ORDER BY name');
+$stmt->execute([$user_id]);
+$products = $stmt->fetchAll();
+
+$page_title = 'New Sale';
 $active_nav = 'pos';
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="page-head">
     <div>
         <p class="eyebrow">Store</p>
-        <h1>Scan Sale</h1>
-        <p>Scan each item's barcode like a mall checkout. New barcodes ask for a name and price once, then are remembered forever.</p>
+        <h1>New Sale</h1>
+        <p>Scan each item's barcode, or pick a product from the list if you don't have it handy to scan.</p>
     </div>
 </div>
 
@@ -46,6 +53,31 @@ include __DIR__ . '/includes/header.php';
                 <button type="button" class="btn-ghost btn" id="np-cancel">Cancel</button>
             </div>
         </div>
+
+        <?php if ($products): ?>
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+            <div class="card-title" style="border-bottom:none; padding-bottom:0;">Or pick a product without scanning</div>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="manual-product">Product</label>
+                    <select id="manual-product">
+                        <option value="">Choose a product&hellip;</option>
+                        <?php foreach ($products as $p): ?>
+                            <option value="<?= (int) $p['id'] ?>"
+                                    data-barcode="<?= h($p['barcode']) ?>"
+                                    data-name="<?= h($p['name']) ?>"
+                                    data-price="<?= h((string) $p['price']) ?>">
+                                <?= h($p['name']) ?> &mdash; <?= peso((float) $p['price']) ?> (<?= (int) $p['stock_quantity'] ?> in stock)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="field" style="align-self:end;">
+                    <button type="button" class="btn-ghost btn" id="manual-add-btn" style="width:100%;">Add to sale</button>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <div class="card">
@@ -55,7 +87,7 @@ include __DIR__ . '/includes/header.php';
                 <tr><th>Item</th><th class="amount">Price</th><th>Qty</th><th class="amount">Subtotal</th><th></th></tr>
             </thead>
             <tbody id="cart-body">
-                <tr id="cart-empty-row"><td colspan="5" class="empty-state">Cart is empty. Scan an item to begin.</td></tr>
+                <tr id="cart-empty-row"><td colspan="5" class="empty-state">Cart is empty. Scan or pick an item to begin.</td></tr>
             </tbody>
         </table>
         <div class="form-actions" style="justify-content:space-between; align-items:center; margin-top:16px;">
@@ -111,7 +143,7 @@ function renderCart() {
             const tr = document.createElement('tr');
             tr.className = 'cart-row';
             tr.innerHTML = `
-                <td>${escapeHtml(item.name)}<br><span class="helper-text" style="margin:0;">${escapeHtml(item.barcode)}</span></td>
+                <td>${escapeHtml(item.name)}<br><span class="helper-text" style="margin:0;">${escapeHtml(item.barcode || 'no barcode')}</span></td>
                 <td class="amount">${PESO(item.price)}</td>
                 <td>
                     <button type="button" class="icon-link qty-btn" data-idx="${idx}" data-delta="-1" style="background:none;border:1px solid var(--line);cursor:pointer;padding:2px 8px;">-</button>
@@ -136,7 +168,7 @@ function escapeHtml(str) {
 }
 
 function addToCart(product) {
-    const existing = cart.find(i => i.barcode === product.barcode);
+    const existing = cart.find(i => i.product_id === product.id);
     if (existing) {
         existing.qty += 1;
     } else {
@@ -224,6 +256,26 @@ document.getElementById('np-cancel').addEventListener('click', () => {
     newProductForm.style.display = 'none';
     focusScanner();
 });
+
+// ---- Manual "pick a product" path - the typing alternative to scanning ----
+const manualProduct = document.getElementById('manual-product');
+const manualAddBtn = document.getElementById('manual-add-btn');
+if (manualAddBtn) {
+    manualAddBtn.addEventListener('click', () => {
+        const opt = manualProduct.selectedOptions[0];
+        if (!opt || !opt.value) {
+            showMessage('Choose a product first.', true);
+            return;
+        }
+        addToCart({
+            id: Number(opt.value),
+            barcode: opt.dataset.barcode,
+            name: opt.dataset.name,
+            price: parseFloat(opt.dataset.price),
+        });
+        manualProduct.value = '';
+    });
+}
 
 checkoutBtn.addEventListener('click', () => {
     if (!cart.length) return;

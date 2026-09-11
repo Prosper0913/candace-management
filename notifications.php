@@ -29,7 +29,7 @@ include __DIR__ . '/includes/header.php';
                 &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
                 &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
                 (<?= h(display_date($s['expected_date'])) ?>)
-                <a href="shipments.php" class="shipment-alert-link">View</a>
+                <a href="shipments.php?filter=upcoming" class="shipment-alert-link">View</a>
             </div>
         <?php endforeach; ?>
         <?php foreach ($shipment_alerts['upcoming'] as $s): ?>
@@ -38,7 +38,7 @@ include __DIR__ . '/includes/header.php';
                 &mdash; <?= (int) $s['item_count'] ?> item(s), <?= h(peso((float) $s['total_cost'])) ?>
                 &mdash; <?= h(shipment_due_label((int) $s['days_left'])) ?>
                 (<?= h(display_date($s['expected_date'])) ?>)
-                <a href="shipments.php" class="shipment-alert-link">View</a>
+                <a href="shipments.php?filter=upcoming" class="shipment-alert-link">View</a>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>

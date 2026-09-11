@@ -153,14 +153,22 @@ include __DIR__ . '/includes/header.php';
                 <tr><th>Barcode</th><th>Name</th><th class="amount">Price</th><th>Stock</th><th>Units sold</th><th></th></tr>
             </thead>
             <tbody>
-            <?php foreach ($products as $row): $low = (int) $row['stock_quantity'] <= (int) $row['low_stock_threshold']; ?>
+            <?php foreach ($products as $row):
+                $stock = (int) $row['stock_quantity'];
+                $none = $stock === 0; // Out of stock: show "None", never "Low".
+                $low = !$none && $stock <= (int) $row['low_stock_threshold']; // "Low" only above zero, at/below the user's setting.
+            ?>
                 <tr>
                     <td style="font-family:var(--font-mono);"><?= h($row['barcode']) ?></td>
                     <td><?= h($row['name']) ?></td>
                     <td class="amount"><?= peso((float) $row['price']) ?></td>
                     <td>
-                        <?= (int) $row['stock_quantity'] ?>
-                        <?php if ($low): ?><span class="status-pill cancelled" style="text-decoration:none; color:var(--negative); border-color:var(--negative);">Low</span><?php endif; ?>
+                        <?php if ($none): ?>
+                            <span class="status-pill cancelled" style="text-decoration:none; color:var(--negative); border-color:var(--negative);">None</span>
+                        <?php else: ?>
+                            <?= $stock ?>
+                            <?php if ($low): ?><span class="status-pill cancelled" style="text-decoration:none; color:var(--negative); border-color:var(--negative);">Low</span><?php endif; ?>
+                        <?php endif; ?>
                     </td>
                     <td><?= (int) $row['units_sold'] ?></td>
                     <td class="actions">

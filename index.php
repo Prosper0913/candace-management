@@ -65,6 +65,7 @@ include __DIR__ . '/includes/header.php';
         <p>Here's a real-time snapshot of your finances as of <?= date('F j, Y') ?>.</p>
     </div>
     <div style="display:flex; gap:10px;">
+        <a href="shipments.php?filter=upcoming" class="btn-ghost btn" style="text-decoration:none;">View upcoming shipments</a>
         <a href="income.php" class="btn-ghost btn" style="text-decoration:none;">+ Add sale</a>
         <a href="expenses.php" class="btn" style="text-decoration:none;">+ Add expense</a>
     </div>

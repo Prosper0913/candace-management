@@ -142,7 +142,7 @@ include __DIR__ . '/includes/header.php';
                     <td><?= $row['quantity'] !== null ? (int) $row['quantity'] : '—' ?></td>
                     <td><?= h($row['notes'] ?? '') ?></td>
                     <td class="amount" style="color:var(--positive);">+<?= peso((float) $row['amount']) ?></td>
-                    <td class="actions">
+                    <!-- <td class="actions">
                         <a class="icon-link" href="income.php?edit=<?= (int) $row['id'] ?>">Edit</a>
                         &nbsp;
                         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this sale entry?');">
@@ -151,7 +151,7 @@ include __DIR__ . '/includes/header.php';
                             <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                             <button type="submit" class="icon-link" style="background:none;border:none;cursor:pointer;color:var(--negative);padding:0;">Delete</button>
                         </form>
-                    </td>
+                    </td> -->
                 </tr>
             <?php endforeach; ?>
             </tbody>

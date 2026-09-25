@@ -122,7 +122,7 @@ h1.headline{
 .sidebar {
     width: 220px;
     flex-shrink: 0;
-    background: var(--panel);
+    background: #dddbdb;
     border-right: 1px solid var(--line);
     padding: 28px 20px;
     display: flex;

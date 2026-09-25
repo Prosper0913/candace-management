@@ -161,7 +161,7 @@ include __DIR__ . '/includes/header.php';
                     <td><?= h($row['title']) ?><?php if ($row['notes']): ?><br><span class="helper-text"><?= h($row['notes']) ?></span><?php endif; ?></td>
                     <td><span class="tag"><?= h($row['category_name'] ?? 'Uncategorized') ?></span></td>
                     <td class="amount" style="color:var(--negative);">-<?= peso((float) $row['amount']) ?></td>
-                    <td class="actions">
+                    <!-- <td class="actions">
                         <a class="icon-link" href="expenses.php?edit=<?= (int) $row['id'] ?>">Edit</a>
                         &nbsp;
                         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this expense entry?');">
@@ -170,7 +170,7 @@ include __DIR__ . '/includes/header.php';
                             <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                             <button type="submit" class="icon-link" style="background:none;border:none;cursor:pointer;color:var(--negative);padding:0;">Delete</button>
                         </form>
-                    </td>
+                    </td> -->
                 </tr>
             <?php endforeach; ?>
             </tbody>

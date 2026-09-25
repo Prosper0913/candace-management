@@ -24,8 +24,8 @@ if (!empty($_SESSION['user_id'])) {
 <div class="app-shell">
     <aside class="sidebar">
         <div class="brand">
-            <img src="images/logo.png" alt="Logo">
-            <span class="brand-name"><?= h(STORE_NAME) ?></span>
+            <img src="images/logo.png" alt="Logo" style="width: 220px; margin-left: -25px;">
+            <!-- <span class="brand-name"><?= h(STORE_NAME) ?></span> -->
         </div>
 
         <nav class="nav-group">

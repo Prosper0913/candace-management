@@ -25,8 +25,8 @@ define('ASSET_VERSION', '1.5.0'); // bump this after editing CSS/JS to bust brow
 // right-click your actual storefront, click the lat/lng shown at the top of
 // the menu, and paste those two numbers in here instead.
 define('STORE_FULL_ADDRESS', '311 Tomas Oppus Street, Maasin City, Southern Leyte, Philippines');
-define('STORE_LAT', 10.1328);
-define('STORE_LNG', 124.8385);
+define('STORE_LAT', 10.133313495397271);   // was 10.1328 — ~220 m up
+define('STORE_LNG', 124.83757267009933);  // was 124.8385 — ~220 m left10.133313495397271, 124.83757267009933
 
 // Required by OpenStreetMap Nominatim's usage policy: identify your app with
 // a real contact so they can reach you if something's wrong, instead of a

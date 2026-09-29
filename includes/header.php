@@ -1,14 +1,14 @@
 <?php
 /**
  * Expects $page_title and optional $page_subtitle to be set before include.
- * Expects $active_nav to be one of: dashboard, income, expenses, categories, reports, pos, products, shipments, notifications
+ * Expects $active_nav to be one of: dashboard, income, expenses, categories, reports, pos, products, shipments, notifications, staff
  */
 $active_nav = $active_nav ?? '';
 
 $header_alert_count = 0;
-if (!empty($_SESSION['user_id'])) {
-    $header_shipment_alerts = get_shipment_alerts($pdo, (int) $_SESSION['user_id']);
-    $header_low_stock = get_low_stock_products($pdo, (int) $_SESSION['user_id']);
+if (!empty($_SESSION['user_id']) && is_owner()) {
+    $header_shipment_alerts = get_shipment_alerts($pdo, store_scope_id());
+    $header_low_stock = get_low_stock_products($pdo, store_scope_id());
     $header_alert_count = count($header_shipment_alerts['urgent']) + count($header_low_stock);
 }
 ?>
@@ -28,6 +28,7 @@ if (!empty($_SESSION['user_id'])) {
             <!-- <span class="brand-name"><?= h(STORE_NAME) ?></span> -->
         </div>
 
+        <?php if (is_owner()): ?>
         <nav class="nav-group">
             <span class="nav-label">Overview</span>
             <a class="nav-link <?= $active_nav === 'dashboard' ? 'active' : '' ?>" href="index.php">Dashboard</a>
@@ -53,17 +54,25 @@ if (!empty($_SESSION['user_id'])) {
             <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">New Sale</a>
             <a class="nav-link <?= $active_nav === 'products' ? 'active' : '' ?>" href="products.php">Products</a>
             <a class="nav-link <?= $active_nav === 'shipments' ? 'active' : '' ?>" href="shipments.php">Shipments</a>
+            <a class="nav-link <?= $active_nav === 'staff' ? 'active' : '' ?>" href="staff.php">Staff</a>
         </nav>
 
         <nav class="nav-group">
             <span class="nav-label">Insights</span>
             <a class="nav-link <?= $active_nav === 'reports' ? 'active' : '' ?>" href="reports.php">Reports</a>
         </nav>
+        <?php else: ?>
+        <nav class="nav-group">
+            <span class="nav-label">Cashier</span>
+            <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">New Sale</a>
+            <a class="nav-link <?= $active_nav === 'expenses' ? 'active' : '' ?>" href="expenses.php">Expenses</a>
+        </nav>
+        <?php endif; ?>
 
         <div class="sidebar-footer">
             <div class="user-chip">
                 <span class="name"><?= h($_SESSION['full_name'] ?? '') ?></span>
-                <span class="username">@<?= h($_SESSION['username'] ?? '') ?></span>
+                <span class="username">@<?= h($_SESSION['username'] ?? '') ?><?php if (!is_owner()): ?> &middot; Cashier<?php endif; ?></span>
                 <a class="logout-link" href="logout.php">Log out</a>
             </div>
         </div>

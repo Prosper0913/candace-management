@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/geocoding.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $id = (int) ($_GET['id'] ?? 0);
 
 $stmt = $pdo->prepare('SELECT * FROM shipments WHERE id = ? AND user_id = ?');

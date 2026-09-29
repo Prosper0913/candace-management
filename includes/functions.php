@@ -17,21 +17,59 @@ function require_login(): void
     // Self-heal: if a session is missing display info (e.g. an older session
     // from before an update, or any other edge case), refill it from the DB
     // instead of letting pages break on a missing session key.
-    if (empty($_SESSION['full_name']) || empty($_SESSION['username'])) {
+    if (empty($_SESSION['full_name']) || empty($_SESSION['username']) || !isset($_SESSION['role'])) {
         global $pdo;
-        $stmt = $pdo->prepare('SELECT full_name, username FROM users WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT full_name, username, role, owner_id FROM users WHERE id = ?');
         $stmt->execute([$_SESSION['user_id']]);
         if ($user = $stmt->fetch()) {
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['username']  = $user['username'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['store_owner_id'] = $user['role'] === 'cashier' ? (int) $user['owner_id'] : (int) $_SESSION['user_id'];
         }
     }
 }
 
-/** Returns the currently logged-in user's id, or null. */
+/**
+ * Redirect away unless the logged-in user is the store owner. Call at the
+ * top of any page a cashier account shouldn't be able to reach.
+ */
+function require_owner(): void
+{
+    require_login();
+    if (!is_owner()) {
+        set_flash('error', 'That page is only available to the store owner.');
+        header('Location: pos.php');
+        exit;
+    }
+}
+
+/** Returns the currently logged-in user's own id, or null. Use for "who is logged in" - NOT for scoping data (see store_scope_id()). */
 function current_user_id(): ?int
 {
     return $_SESSION['user_id'] ?? null;
+}
+
+/**
+ * Returns the id that owns the data being worked with - use this (not
+ * current_user_id()) everywhere a query is scoped to "this store". For an
+ * owner account this is their own id; for a cashier account it's the owner
+ * they belong to, so owner and cashier share one single inventory/ledger.
+ */
+function store_scope_id(): int
+{
+    return (int) ($_SESSION['store_owner_id'] ?? $_SESSION['user_id'] ?? 0);
+}
+
+/** 'owner' or 'cashier' for the current session. */
+function current_role(): string
+{
+    return $_SESSION['role'] ?? 'owner';
+}
+
+function is_owner(): bool
+{
+    return current_role() === 'owner';
 }
 
 /** Generate (or reuse) a CSRF token for the current session. */
@@ -124,6 +162,22 @@ function get_low_stock_products(PDO $pdo, int $user_id): array
     );
     $stmt->execute([$user_id]);
     return $stmt->fetchAll();
+}
+
+/**
+ * Records a stock addition for the history log. $source is a short machine
+ * tag ('manual' from the Products page, 'shipment' from a received
+ * shipment); $reference is a human-readable note (a supplier name, a typed
+ * note, etc). Logs who actually performed the action (current_user_id()),
+ * separate from which store it belongs to (store_scope_id()) - useful since
+ * a cashier could restock too and it's worth knowing who did it.
+ */
+function log_stock_addition(PDO $pdo, int $store_id, int $product_id, int $quantity_added, string $source, ?string $reference = null): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO stock_history (user_id, product_id, quantity_added, source, reference, performed_by) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([$store_id, $product_id, $quantity_added, $source, $reference, current_user_id()]);
 }
 
 /** Flash message helpers (simple one-time session messages) */

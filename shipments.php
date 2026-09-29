@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/geocoding.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $errors = [];
 
 // ---- Handle form submissions --------------------------------------------
@@ -178,8 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare('SELECT product_id, quantity FROM shipment_items WHERE shipment_id = ? AND product_id IS NOT NULL');
                 $stmt->execute([$id]);
                 $restock_stmt = $pdo->prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ? AND user_id = ?');
+                $restock_reference = 'Shipment' . ($shipment['supplier'] ? ' from ' . $shipment['supplier'] : '');
                 foreach ($stmt->fetchAll() as $line) {
                     $restock_stmt->execute([$line['quantity'], $line['product_id'], $user_id]);
+                    log_stock_addition($pdo, $user_id, $line['product_id'], $line['quantity'], 'shipment', $restock_reference);
                 }
 
                 $stmt = $pdo->prepare('UPDATE shipments SET status = "received", expense_id = ? WHERE id = ? AND user_id = ?');

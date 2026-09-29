@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 
 // ---- All-time totals ----------------------------------------------------
 $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount),0) AS total FROM income WHERE user_id = ?');

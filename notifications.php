@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $low_stock = get_low_stock_products($pdo, $user_id);
 $shipment_alerts = get_shipment_alerts($pdo, $user_id);
 

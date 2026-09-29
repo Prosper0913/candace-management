@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $errors = [];
 
 $catStmt = $pdo->prepare('SELECT id, name FROM categories WHERE user_id = ? ORDER BY name');
@@ -17,6 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $action = $_POST['action'] ?? 'create';
+
+    // Cashiers can record expenses but never change or remove one afterwards.
+    // Enforced here (not just by hiding buttons) so a hand-crafted request
+    // from a cashier account is refused too.
+    if (in_array($action, ['update', 'delete'], true) && !is_owner()) {
+        set_flash('error', 'Only the store owner can edit or delete expenses.');
+        header('Location: expenses.php');
+        exit;
+    }
 
     if ($action === 'delete') {
         $id = (int) ($_POST['id'] ?? 0);
@@ -65,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $editing = null;
-if (isset($_GET['edit'])) {
+if (isset($_GET['edit']) && is_owner()) {
     $stmt = $pdo->prepare('SELECT * FROM expenses WHERE id = ? AND user_id = ?');
     $stmt->execute([(int) $_GET['edit'], $user_id]);
     $editing = $stmt->fetch() ?: null;
@@ -161,7 +170,8 @@ include __DIR__ . '/includes/header.php';
                     <td><?= h($row['title']) ?><?php if ($row['notes']): ?><br><span class="helper-text"><?= h($row['notes']) ?></span><?php endif; ?></td>
                     <td><span class="tag"><?= h($row['category_name'] ?? 'Uncategorized') ?></span></td>
                     <td class="amount" style="color:var(--negative);">-<?= peso((float) $row['amount']) ?></td>
-                    <!-- <td class="actions">
+                    <?php if (is_owner()): ?>
+                    <td class="actions">
                         <a class="icon-link" href="expenses.php?edit=<?= (int) $row['id'] ?>">Edit</a>
                         &nbsp;
                         <form method="post" style="display:inline;" onsubmit="return confirm('Delete this expense entry?');">
@@ -170,7 +180,10 @@ include __DIR__ . '/includes/header.php';
                             <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                             <button type="submit" class="icon-link" style="background:none;border:none;cursor:pointer;color:var(--negative);padding:0;">Delete</button>
                         </form>
-                    </td> -->
+                    </td>
+                    <?php else: ?>
+                    <td></td>
+                    <?php endif; ?>
                 </tr>
             <?php endforeach; ?>
             </tbody>

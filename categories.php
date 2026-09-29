@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

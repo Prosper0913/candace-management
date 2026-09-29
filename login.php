@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old_username = trim($_POST['username'] ?? '');
         $password     = $_POST['password'] ?? '';
 
-        $stmt = $pdo->prepare('SELECT id, full_name, username, password_hash FROM users WHERE username = ? OR email = ?');
+        $stmt = $pdo->prepare('SELECT id, full_name, username, password_hash, role, owner_id FROM users WHERE username = ? OR email = ?');
         $stmt->execute([$old_username, $old_username]);
         $user = $stmt->fetch();
 
@@ -36,9 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id']   = (int) $user['id'];
             $_SESSION['full_name'] = $user['full_name'];
             $_SESSION['username']  = $user['username'];
+            $_SESSION['role']      = $user['role'];
+            $_SESSION['store_owner_id'] = $user['role'] === 'cashier' ? (int) $user['owner_id'] : (int) $user['id'];
             $_SESSION['login_attempts'] = 0;
 
-            header('Location: homepage.php');
+            // Cashiers go straight to the till - the dashboard/homepage
+            // teaser is owner-only territory.
+            header('Location: ' . ($user['role'] === 'cashier' ? 'pos.php' : 'homepage.php'));
             exit;
         }
 

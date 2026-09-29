@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $sale_id = (int) ($_GET['sale'] ?? 0);
 
 $stmt = $pdo->prepare('SELECT * FROM sales WHERE id = ? AND user_id = ?');
@@ -98,6 +98,16 @@ $items = $stmt->fetchAll();
                 <td colspan="2">TOTAL</td>
                 <td class="num">&#8369;<?= number_format((float) $sale['total_amount'], 2) ?></td>
             </tr>
+            <?php if (isset($sale['cash_received'])): ?>
+            <tr>
+                <td colspan="2">Cash</td>
+                <td class="num">&#8369;<?= number_format((float) $sale['cash_received'], 2) ?></td>
+            </tr>
+            <tr>
+                <td colspan="2">Change</td>
+                <td class="num">&#8369;<?= number_format((float) ($sale['change_due'] ?? 0), 2) ?></td>
+            </tr>
+            <?php endif; ?>
         </tbody>
     </table>
     <hr class="rule">

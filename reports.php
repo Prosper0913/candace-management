@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 
 // ---- Date range filter (defaults to last 6 months) ----------------------
 $from = $_GET['from'] ?? date('Y-m-d', strtotime('-5 months', strtotime(date('Y-m-01'))));

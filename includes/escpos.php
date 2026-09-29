@@ -122,6 +122,12 @@ function build_receipt_escpos(array $sale, array $items): string
     $r->bold(true);
     $r->twoColumn('TOTAL', 'P ' . number_format((float) $sale['total_amount'], 2));
     $r->bold(false);
+
+    // Older sales (from before cash tracking) have no cash/change - skip the lines.
+    if (isset($sale['cash_received'])) {
+        $r->twoColumn('Cash', 'P ' . number_format((float) $sale['cash_received'], 2));
+        $r->twoColumn('Change', 'P ' . number_format((float) ($sale['change_due'] ?? 0), 2));
+    }
     $r->newline();
 
     $r->centerAlign();

@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 $errors = [];
 
 // ---- Handle form submissions --------------------------------------------
@@ -26,6 +26,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'add_stock') {
+        $id = (int) ($_POST['id'] ?? 0);
+        $qty = (int) ($_POST['add_quantity'] ?? 0);
+        $note = trim($_POST['add_note'] ?? '');
+
+        if ($qty <= 0) {
+            set_flash('error', 'Enter a quantity greater than zero to add.');
+            header('Location: products.php');
+            exit;
+        }
+
+        $stmt = $pdo->prepare('SELECT id, name FROM products WHERE id = ? AND user_id = ?');
+        $stmt->execute([$id, $user_id]);
+        $product = $stmt->fetch();
+
+        if ($product) {
+            $pdo->prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ? AND user_id = ?')
+                ->execute([$qty, $id, $user_id]);
+            log_stock_addition($pdo, $user_id, $id, $qty, 'manual', $note !== '' ? $note : null);
+            set_flash('success', "Added {$qty} to {$product['name']}'s stock.");
+        }
+        header('Location: products.php');
+        exit;
+    }
+
     $barcode = trim($_POST['barcode'] ?? '');
     $name = trim($_POST['name'] ?? '');
     $price = $_POST['price'] ?? '';
@@ -43,22 +68,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($action === 'update') {
                 $id = (int) ($_POST['id'] ?? 0);
+
+                $old = $pdo->prepare('SELECT stock_quantity FROM products WHERE id = ? AND user_id = ?');
+                $old->execute([$id, $user_id]);
+                $old_stock = $old->fetchColumn();
+
                 $stmt = $pdo->prepare(
                     'UPDATE products SET barcode = ?, name = ?, price = ?, stock_quantity = ?, low_stock_threshold = ? WHERE id = ? AND user_id = ?'
                 );
                 $stmt->execute([$barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold, $id, $user_id]);
+
+                // Stock raised by editing counts as stock added - log the difference.
+                if ($old_stock !== false && (int) $stock_quantity > (int) $old_stock) {
+                    log_stock_addition($pdo, $user_id, $id, (int) $stock_quantity - (int) $old_stock, 'manual', 'Stock edited on the Products page');
+                }
                 set_flash('success', 'Product updated.');
             } else {
                 $stmt = $pdo->prepare(
                     'INSERT INTO products (user_id, barcode, name, price, stock_quantity, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?)'
                 );
                 $stmt->execute([$user_id, $barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold]);
+
+                if ((int) $stock_quantity > 0) {
+                    log_stock_addition($pdo, $user_id, (int) $pdo->lastInsertId(), (int) $stock_quantity, 'manual', 'Initial stock');
+                }
                 set_flash('success', 'Product registered to that barcode.');
             }
             header('Location: products.php');
             exit;
         } catch (PDOException $e) {
-            $errors[] = 'You already have a product registered under that barcode.';
+            // 23000 = integrity constraint violation, i.e. the barcode already exists.
+            $errors[] = $e->getCode() === '23000'
+                ? 'You already have a product registered under that barcode.'
+                : 'Could not save the product. If you just updated the app, make sure the database migrations have been run.';
         }
     }
 }
@@ -93,7 +135,8 @@ include __DIR__ . '/includes/header.php';
         <h1>Products</h1>
         <p>Every barcode the scanner remembers, and the price it charges when scanned.</p>
     </div>
-    <div>
+    <div style="display:flex; gap:10px;">
+        <a href="stock_history.php" class="btn-ghost btn" style="text-decoration:none;">Stock History</a>
         <a href="pos.php" class="btn" style="text-decoration:none;">Go to Scan Sale</a>
     </div>
 </div>
@@ -179,6 +222,14 @@ include __DIR__ . '/includes/header.php';
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
                             <button type="submit" class="icon-link" style="background:none;border:none;cursor:pointer;color:var(--negative);padding:0;">Delete</button>
+                        </form>
+                        <br>
+                        <form method="post" style="display:flex; gap:4px; justify-content:flex-end; margin-top:6px;">
+                            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                            <input type="hidden" name="action" value="add_stock">
+                            <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                            <input type="number" name="add_quantity" min="1" step="1" placeholder="Qty" required style="width:60px; padding:4px 6px; font-size:12px;">
+                            <button type="submit" class="icon-link" style="background:none;border:1px solid var(--line);cursor:pointer;padding:3px 8px;font-size:12px;white-space:nowrap;">+ Add stock</button>
                         </form>
                     </td>
                 </tr>

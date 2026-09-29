@@ -1,9 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/geocoding.php';
-require_login();
+require_owner();
 
-$user_id = current_user_id();
+$user_id = store_scope_id();
 
 $stmt = $pdo->prepare(
     'SELECT s.*, COALESCE(SUM(si.line_total), 0) AS total_cost, COUNT(si.id) AS item_count

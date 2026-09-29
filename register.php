@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
 
                 $stmt = $pdo->prepare(
-                    'INSERT INTO users (full_name, username, email, password_hash) VALUES (?, ?, ?, ?)'
+                    'INSERT INTO users (full_name, username, email, password_hash, role) VALUES (?, ?, ?, ?, "owner")'
                 );
                 $stmt->execute([
                     $old['full_name'],
@@ -61,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id']   = $user_id;
                 $_SESSION['full_name'] = $old['full_name'];
                 $_SESSION['username']  = $old['username'];
+                $_SESSION['role']      = 'owner';
+                $_SESSION['store_owner_id'] = $user_id;
 
                 set_flash('success', 'Welcome to Candace! Your account is ready.');
                 header('Location: index.php');

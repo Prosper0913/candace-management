@@ -34,12 +34,16 @@ if (!empty($_SESSION['user_id']) && is_owner()) {
             <a class="nav-link <?= $active_nav === 'dashboard' ? 'active' : '' ?>" href="index.php">Dashboard</a>
         </nav>
 
+            <hr class="thin-line">
+
         <nav class="nav-group">
             <span class="nav-label">Record</span>
             <a class="nav-link <?= $active_nav === 'income' ? 'active' : '' ?>" href="income.php">Sales</a>
             <a class="nav-link <?= $active_nav === 'expenses' ? 'active' : '' ?>" href="expenses.php">Expenses</a>
             <a class="nav-link <?= $active_nav === 'categories' ? 'active' : '' ?>" href="categories.php">Categories</a>
         </nav>
+
+            <hr class="thin-line">
 
         <nav class="nav-group">
             <span class="nav-label">Alerts</span>
@@ -49,6 +53,8 @@ if (!empty($_SESSION['user_id']) && is_owner()) {
             </a>
         </nav>
 
+            <hr class="thin-line">
+
         <nav class="nav-group">
             <span class="nav-label">Store</span>
             <a class="nav-link <?= $active_nav === 'pos' ? 'active' : '' ?>" href="pos.php">New Sale</a>
@@ -56,6 +62,8 @@ if (!empty($_SESSION['user_id']) && is_owner()) {
             <a class="nav-link <?= $active_nav === 'shipments' ? 'active' : '' ?>" href="shipments.php">Shipments</a>
             <a class="nav-link <?= $active_nav === 'staff' ? 'active' : '' ?>" href="staff.php">Staff</a>
         </nav>
+
+            <hr class="thin-line">
 
         <nav class="nav-group">
             <span class="nav-label">Insights</span>

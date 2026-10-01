@@ -18,6 +18,7 @@
     --muted:      #8a8c90;
     --positive:   #3f6b52;   /* desaturated green — income */
     --negative:   #8a4a3d;   /* desaturated rust — expense (kept distinct from brand red) */
+    --cardbg:     #e0d6d6;
 
     --accent:       #ED1C24; /* bright red — the logo color, used for primary actions/active states */
     --accent-hover: #C4141A;
@@ -122,8 +123,8 @@ h1.headline{
 .sidebar {
     width: 220px;
     flex-shrink: 0;
-    background: #dddbdb;
-    border-right: 1px solid var(--line);
+    background: #fafafa;
+    border-right: 1px solid var(--bg);
     padding: 28px 20px;
     display: flex;
     flex-direction: column;
@@ -196,6 +197,7 @@ h1.headline{
     margin-top: auto;
     border-top: 1px solid var(--line);
     padding-top: 16px;
+    max-height: 100vh;
 }
 
 .user-chip {
@@ -257,7 +259,7 @@ h1.headline{
 
 .card {
     background: var(--panel);
-    border: 1px solid var(--line);
+    border: 1px solid var(--bg);
     border-radius: var(--radius);
     padding: 20px;
 }
@@ -471,7 +473,7 @@ td.actions { text-align: right; white-space: nowrap; }
 .auth-card {
     width: 100%;
     max-width: 380px;
-    background: var(--panel);
+    background: var(--paper);
     border: 1px solid var(--line);
     border-top: 3px solid var(--accent);
     border-radius: var(--radius);
@@ -690,4 +692,10 @@ td.actions { text-align: right; white-space: nowrap; }
     font-size: 22px;
     line-height: 1;
     transform: translateY(-2px);
+}
+
+.thin-line {
+  border: none;
+  border-top: 1px solid var(--bg); /* Adjust color as needed */
+  margin: -10px 0;             /* Controls spacing above and below the line */
 }

@@ -164,6 +164,14 @@ if ($action === 'checkout') {
         }
         $total = round($total, 2);
 
+        // $total so far is just the subtotal (sum of price*qty) - VAT is
+        // computed here, server-side, from the store's own saved rate. The
+        // client shows a preview of this, but never gets to decide it.
+        $subtotal = $total;
+        $vat_percent = get_vat_percent($pdo, $user_id);
+        $vat_amount = round($subtotal * $vat_percent / 100, 2);
+        $total = round($subtotal + $vat_amount, 2);
+
         if ($cash_received < $total) {
             $fail('Cash received is less than the total - collect the full amount first.');
         }
@@ -179,10 +187,10 @@ if ($action === 'checkout') {
 
         // Sale header
         $stmt = $pdo->prepare(
-            'INSERT INTO sales (user_id, income_id, total_amount, cash_received, change_due, item_count, sale_date)
-             VALUES (?, ?, ?, ?, ?, ?, CURDATE())'
+            'INSERT INTO sales (user_id, income_id, total_amount, subtotal, vat_percent, vat_amount, cash_received, change_due, item_count, sale_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())'
         );
-        $stmt->execute([$user_id, $income_id, $total, $cash_received, $change_due, $item_count]);
+        $stmt->execute([$user_id, $income_id, $total, $subtotal, $vat_percent, $vat_amount, $cash_received, $change_due, $item_count]);
         $sale_id = (int) $pdo->lastInsertId();
 
         // Line items + stock deduction
@@ -204,6 +212,7 @@ if ($action === 'checkout') {
         // top of that, so a printer hiccup never loses or blocks a sale.
         $sale_row = [
             'id' => $sale_id, 'total_amount' => $total,
+            'subtotal' => $subtotal, 'vat_percent' => $vat_percent, 'vat_amount' => $vat_amount,
             'cash_received' => $cash_received, 'change_due' => $change_due,
             'created_at' => date('Y-m-d H:i:s'),
         ];

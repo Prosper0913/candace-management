@@ -699,3 +699,64 @@ td.actions { text-align: right; white-space: nowrap; }
   border-top: 1px solid var(--bg); /* Adjust color as needed */
   margin: -10px 0;             /* Controls spacing above and below the line */
 }
+
+/* ---------- Receipt popup (used on the New Sale page) ---------- */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(23, 24, 26, 0.55);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 380px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 700;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--ink-soft);
+    padding: 0 4px;
+}
+.modal-close:hover { color: var(--accent); }
+
+#receipt-frame {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 360px;
+    border: none;
+    background: #fff;
+}
+
+.modal-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: flex-end;
+}
+.modal-footer .btn { width: auto; height: auto; padding: 10px 18px; }

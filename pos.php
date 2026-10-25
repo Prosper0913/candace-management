@@ -122,6 +122,20 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<div id="receipt-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span>Receipt</span>
+            <button type="button" id="receipt-modal-close" class="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <p id="receipt-print-status" class="helper-text" style="padding:0 16px; margin:10px 0;"></p>
+        <iframe id="receipt-frame" title="Receipt"></iframe>
+        <div class="modal-footer">
+            <button type="button" id="receipt-done-btn" class="btn">Done &ndash; next customer</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
 const PESO = amt => '\u20b1' + Number(amt).toFixed(2);
@@ -401,18 +415,48 @@ checkoutBtn.addEventListener('click', () => {
             cart = [];
             cashReceivedInput.value = '';
             renderCart();
+            checkoutBtn.disabled = false;
+            checkoutBtn.textContent = 'Complete sale & print receipt';
 
-            if (!data.printed) {
-                // Sale is saved regardless - only the physical printout failed.
-                alert('Sale saved, but the receipt did not print:\n\n' + (data.print_error || 'Unknown printer error') + '\n\nYou can reprint or view it on the next screen.');
-            }
-            window.location.href = `receipt.php?sale=${data.sale_id}`;
+            openReceiptModal(data.sale_id, data.printed, data.print_error);
         })
         .catch(() => {
             showMessage('Could not reach the server.', true);
             checkoutBtn.disabled = false;
             checkoutBtn.textContent = 'Complete sale & print receipt';
         });
+});
+
+// ---- Receipt popup ---------------------------------------------------------
+// Shown right over the New Sale page instead of navigating away, so ringing
+// up the next customer never means leaving and coming back to this page.
+const receiptModal = document.getElementById('receipt-modal');
+const receiptFrame = document.getElementById('receipt-frame');
+const receiptPrintStatus = document.getElementById('receipt-print-status');
+
+function openReceiptModal(saleId, printed, printError) {
+    if (printed) {
+        receiptPrintStatus.textContent = '';
+    } else {
+        // Sale is saved regardless - only the physical printout failed.
+        receiptPrintStatus.textContent = "Didn't print: " + (printError || 'Unknown printer error') + ' - use "Reprint" below once it\'s fixed, or print via browser.';
+        receiptPrintStatus.style.color = 'var(--negative)';
+    }
+    receiptFrame.src = `receipt.php?sale=${saleId}`;
+    receiptModal.style.display = 'flex';
+}
+
+function closeReceiptModal() {
+    receiptModal.style.display = 'none';
+    receiptFrame.src = 'about:blank';
+    focusScanner();
+}
+
+document.getElementById('receipt-modal-close').addEventListener('click', closeReceiptModal);
+document.getElementById('receipt-done-btn').addEventListener('click', closeReceiptModal);
+// Clicking the dimmed backdrop (not the receipt box itself) also closes it.
+receiptModal.addEventListener('click', (e) => {
+    if (e.target === receiptModal) closeReceiptModal();
 });
 
 renderCart();

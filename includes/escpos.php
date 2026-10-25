@@ -119,6 +119,14 @@ function build_receipt_escpos(array $sale, array $items): string
     }
 
     $r->rule();
+
+    // Older sales (from before VAT tracking) have no breakdown - skip straight to TOTAL.
+    if (isset($sale['vat_amount']) && (float) ($sale['vat_percent'] ?? 0) > 0) {
+        $r->twoColumn('Subtotal', number_format((float) $sale['subtotal'], 2));
+        $vatLabel = 'VAT (' . rtrim(rtrim(number_format((float) $sale['vat_percent'], 2), '0'), '.') . '%)';
+        $r->twoColumn($vatLabel, number_format((float) $sale['vat_amount'], 2));
+    }
+
     $r->bold(true);
     $r->twoColumn('TOTAL', 'P ' . number_format((float) $sale['total_amount'], 2));
     $r->bold(false);

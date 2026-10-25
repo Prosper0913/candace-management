@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $price = $_POST['price'] ?? '';
     $stock_quantity = $_POST['stock_quantity'] ?? '0';
     $low_stock_threshold = $_POST['low_stock_threshold'] ?? (string) DEFAULT_LOW_STOCK_THRESHOLD;
+    $category = trim($_POST['category'] ?? '');
 
     if ($barcode === '') $errors[] = 'Please scan or type a barcode.';
     elseif (strlen($barcode) > 64) $errors[] = 'Barcode is too long.';
@@ -63,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_numeric($price) || (float) $price <= 0) $errors[] = 'Please enter a valid price greater than zero.';
     if (!is_numeric($stock_quantity) || (int) $stock_quantity < 0) $errors[] = 'Stock on hand must be zero or more.';
     if (!is_numeric($low_stock_threshold) || (int) $low_stock_threshold < 0) $errors[] = 'Low-stock warning level must be zero or more.';
+    if (strlen($category) > 100) $errors[] = 'Category is too long (100 characters max).';
 
     if (!$errors) {
         try {
@@ -74,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $old_stock = $old->fetchColumn();
 
                 $stmt = $pdo->prepare(
-                    'UPDATE products SET barcode = ?, name = ?, price = ?, stock_quantity = ?, low_stock_threshold = ? WHERE id = ? AND user_id = ?'
+                    'UPDATE products SET barcode = ?, name = ?, category = ?, price = ?, stock_quantity = ?, low_stock_threshold = ? WHERE id = ? AND user_id = ?'
                 );
-                $stmt->execute([$barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold, $id, $user_id]);
+                $stmt->execute([$barcode, $name, $category !== '' ? $category : null, $price, (int) $stock_quantity, (int) $low_stock_threshold, $id, $user_id]);
 
                 // Stock raised by editing counts as stock added - log the difference.
                 if ($old_stock !== false && (int) $stock_quantity > (int) $old_stock) {
@@ -85,9 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_flash('success', 'Product updated.');
             } else {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO products (user_id, barcode, name, price, stock_quantity, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?)'
+                    'INSERT INTO products (user_id, barcode, name, category, price, stock_quantity, low_stock_threshold) VALUES (?, ?, ?, ?, ?, ?, ?)'
                 );
-                $stmt->execute([$user_id, $barcode, $name, $price, (int) $stock_quantity, (int) $low_stock_threshold]);
+                $stmt->execute([$user_id, $barcode, $name, $category !== '' ? $category : null, $price, (int) $stock_quantity, (int) $low_stock_threshold]);
 
                 if ((int) $stock_quantity > 0) {
                     log_stock_addition($pdo, $user_id, (int) $pdo->lastInsertId(), (int) $stock_quantity, 'manual', 'Initial stock');
@@ -124,6 +126,15 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute([$user_id]);
 $products = $stmt->fetchAll();
+
+// ---- Categories already in use (for the form suggestions and the filter) ----
+$stmt = $pdo->prepare(
+    "SELECT DISTINCT category FROM products
+     WHERE user_id = ? AND category IS NOT NULL AND category <> ''
+     ORDER BY category"
+);
+$stmt->execute([$user_id]);
+$categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 $page_title = 'Products';
 $active_nav = 'products';
@@ -164,6 +175,17 @@ include __DIR__ . '/includes/header.php';
                        value="<?= h($editing['name'] ?? '') ?>" required>
             </div>
             <div class="field">
+                <label for="category">Category</label>
+                <input type="text" id="category" name="category" list="category-list"
+                       placeholder="e.g. Beverages (pick or type a new one)" maxlength="100"
+                       value="<?= h($editing['category'] ?? '') ?>">
+                <datalist id="category-list">
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?= h($cat) ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
+            </div>
+            <div class="field">
                 <label for="price">Price (₱)</label>
                 <input type="number" step="0.01" min="0.01" id="price" name="price"
                        value="<?= h((string) ($editing['price'] ?? '')) ?>" required>
@@ -187,23 +209,42 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <div class="card">
-    <div class="card-title">All products</div>
+    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span>All products</span>
+        <?php if ($products): ?>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select id="category-filter"
+                    style="padding:7px 10px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px;">
+                <option value="">All categories</option>
+                <?php foreach ($categories as $cat): ?>
+                    <option value="<?= h(strtolower($cat)) ?>"><?= h($cat) ?></option>
+                <?php endforeach; ?>
+                <option value="__none__">Uncategorized</option>
+            </select>
+            <input type="text" id="product-search" placeholder="Search by name or barcode&hellip;" autocomplete="off"
+                   style="max-width:260px; padding:7px 10px; border:1px solid var(--line); border-radius:var(--radius); font-size:14px;">
+        </div>
+        <?php endif; ?>
+    </div>
     <?php if (!$products): ?>
         <div class="empty-state">No products registered yet. Scan an item's barcode above, or register one from the Scan Sale page the first time you ring it up.</div>
     <?php else: ?>
         <table>
             <thead>
-                <tr><th>Barcode</th><th>Name</th><th class="amount">Price</th><th>Stock</th><th>Units sold</th><th></th></tr>
+                <tr><th>Barcode</th><th>Name</th><th>Category</th><th class="amount">Price</th><th>Stock</th><th>Units sold</th><th></th></tr>
             </thead>
-            <tbody>
+            <tbody id="product-rows">
             <?php foreach ($products as $row):
                 $stock = (int) $row['stock_quantity'];
                 $none = $stock === 0; // Out of stock: show "None", never "Low".
                 $low = !$none && $stock <= (int) $row['low_stock_threshold']; // "Low" only above zero, at/below the user's setting.
+                $has_category = ($row['category'] ?? '') !== '';
             ?>
-                <tr>
+                <tr data-search="<?= h(strtolower($row['name'] . ' ' . $row['barcode'])) ?>"
+                    data-category="<?= h($has_category ? strtolower($row['category']) : '__none__') ?>">
                     <td style="font-family:var(--font-mono);"><?= h($row['barcode']) ?></td>
                     <td><?= h($row['name']) ?></td>
+                    <td><?= $has_category ? h($row['category']) : '<span style="color:#999;">&mdash;</span>' ?></td>
                     <td class="amount"><?= peso((float) $row['price']) ?></td>
                     <td>
                         <?php if ($none): ?>
@@ -234,8 +275,32 @@ include __DIR__ . '/includes/header.php';
                     </td>
                 </tr>
             <?php endforeach; ?>
+            <tr id="product-search-empty" style="display:none;"><td colspan="7" class="empty-state">No products match that search.</td></tr>
             </tbody>
         </table>
+        <script>
+            const productSearch = document.getElementById('product-search');
+            const categoryFilter = document.getElementById('category-filter');
+            const productRows = document.querySelectorAll('#product-rows tr[data-search]');
+            const searchEmptyRow = document.getElementById('product-search-empty');
+
+            function applyFilters() {
+                const query = productSearch.value.trim().toLowerCase();
+                const category = categoryFilter.value;
+                let visibleCount = 0;
+                productRows.forEach(row => {
+                    const matchesText = row.dataset.search.includes(query);
+                    const matchesCategory = category === '' || row.dataset.category === category;
+                    const show = matchesText && matchesCategory;
+                    row.style.display = show ? '' : 'none';
+                    if (show) visibleCount++;
+                });
+                searchEmptyRow.style.display = visibleCount === 0 ? '' : 'none';
+            }
+
+            productSearch.addEventListener('input', applyFilters);
+            categoryFilter.addEventListener('change', applyFilters);
+        </script>
     <?php endif; ?>
 </div>
 <?php include __DIR__ . '/includes/footer.php'; ?>

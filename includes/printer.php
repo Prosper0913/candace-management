@@ -59,17 +59,20 @@ function send_to_printer_network(string $bytes): array
 
 function send_to_printer_windows_usb(string $bytes): array
 {
-    $tmpFile = tempnam(sys_get_temp_dir(), 'receipt_') . '.prn';
+    $tmpFile = tempnam(sys_get_temp_dir(), 'receipt_');
     if (file_put_contents($tmpFile, $bytes) === false) {
         return [false, 'Could not write temporary print file.'];
     }
 
-    // "copy /b" sends the file byte-for-byte with no reinterpretation - this
-    // is the standard trick for raw-printing to a shared Windows printer.
-    $cmd = 'copy /b ' . escapeshellarg($tmpFile) . ' ' . escapeshellarg(PRINTER_SHARE_NAME) . ' 2>&1';
+    $script = __DIR__ . DIRECTORY_SEPARATOR . 'raw_print.ps1';
+    $cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -File '
+         . escapeshellarg($script)
+         . ' -Name ' . escapeshellarg(PRINTER_NAME)
+         . ' -Path ' . escapeshellarg($tmpFile) . ' 2>&1';
+
     $output = [];
     $returnVar = 0;
-    exec('cmd /c ' . $cmd, $output, $returnVar);
+    exec($cmd, $output, $returnVar);
     @unlink($tmpFile);
 
     if ($returnVar !== 0) {

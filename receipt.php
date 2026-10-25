@@ -94,6 +94,16 @@ $items = $stmt->fetchAll();
                 <td class="num">&#8369;<?= number_format((float) $item['line_total'], 2) ?></td>
             </tr>
         <?php endforeach; ?>
+            <?php if (isset($sale['vat_amount']) && (float) ($sale['vat_percent'] ?? 0) > 0): ?>
+            <tr>
+                <td colspan="2">Subtotal</td>
+                <td class="num">&#8369;<?= number_format((float) $sale['subtotal'], 2) ?></td>
+            </tr>
+            <tr>
+                <td colspan="2">VAT (<?= h(rtrim(rtrim(number_format((float) $sale['vat_percent'], 2), '0'), '.')) ?>%)</td>
+                <td class="num">&#8369;<?= number_format((float) $sale['vat_amount'], 2) ?></td>
+            </tr>
+            <?php endif; ?>
             <tr class="total-row">
                 <td colspan="2">TOTAL</td>
                 <td class="num">&#8369;<?= number_format((float) $sale['total_amount'], 2) ?></td>
@@ -114,14 +124,14 @@ $items = $stmt->fetchAll();
     <p class="thanks">Thank you for shopping with us!</p>
 </div>
 
-<div class="actions no-print">
+<!-- <div class="actions no-print">
     <button type="button" id="reprint-btn">Reprint on receipt printer</button>
     <button type="button" onclick="window.print()">Print via browser instead</button>
     <a href="pos.php">Back to Scan Sale</a>
 </div>
-<p class="no-print" id="reprint-status" style="max-width:300px; margin:10px auto 0; text-align:center; font-size:12px; color:#555;"></p>
+<p class="no-print" id="reprint-status" style="max-width:300px; margin:10px auto 0; text-align:center; font-size:12px; color:#555;"></p> -->
 
-<script>
+<!-- <script>
     const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
     const saleId = <?= (int) $sale['id'] ?>;
     const reprintBtn = document.getElementById('reprint-btn');
@@ -153,6 +163,6 @@ $items = $stmt->fetchAll();
                 reprintBtn.textContent = 'Reprint on receipt printer';
             });
     });
-</script>
+</script> -->
 </body>
 </html>

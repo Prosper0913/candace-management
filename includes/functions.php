@@ -172,6 +172,19 @@ function get_low_stock_products(PDO $pdo, int $user_id): array
  * separate from which store it belongs to (store_scope_id()) - useful since
  * a cashier could restock too and it's worth knowing who did it.
  */
+/**
+ * The store's current VAT rate, as a percent (e.g. 12.00 for 12%). Returns
+ * 0.00 if the owner hasn't set one yet, so VAT is simply off by default
+ * rather than breaking anything for stores that don't use it.
+ */
+function get_vat_percent(PDO $pdo, int $store_id): float
+{
+    $stmt = $pdo->prepare('SELECT vat_percent FROM store_settings WHERE user_id = ?');
+    $stmt->execute([$store_id]);
+    $value = $stmt->fetchColumn();
+    return $value !== false ? (float) $value : 0.00;
+}
+
 function log_stock_addition(PDO $pdo, int $store_id, int $product_id, int $quantity_added, string $source, ?string $reference = null): void
 {
     $stmt = $pdo->prepare(

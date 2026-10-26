@@ -264,7 +264,7 @@ h1.headline{
     padding: 20px;
 }
 
-.card + .card { margin-top: 16px; }
+/* .card + .card { margin-top: 16px; } */
 
 .card-title {
     font-size: 13px;

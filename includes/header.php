@@ -56,6 +56,7 @@ if (!empty($_SESSION['user_id']) && is_owner()) {
             <a class="nav-link <?= $active_nav === 'shipments' ? 'active' : '' ?>" href="shipments.php">Shipments</a>
             <a class="nav-link <?= $active_nav === 'staff' ? 'active' : '' ?>" href="staff.php">Staff</a>
             <a class="nav-link <?= $active_nav === 'settings' ? 'active' : '' ?>" href="settings.php">Settings</a>
+            <a class="nav-link <?= $active_nav === 'backup' ? 'active' : '' ?>" href="backup.php">Backup</a>
         </nav>
 
         <nav class="nav-group">
